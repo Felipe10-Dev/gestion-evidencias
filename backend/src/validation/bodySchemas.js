@@ -51,6 +51,10 @@ const evidenceCreateSubfolderSchema = Joi.object({
   nombre: Joi.string().trim().min(1).required(),
 });
 
+const evidenceRenameFolderSchema = Joi.object({
+  nombre: Joi.string().trim().min(1).required(),
+});
+
 const evidenceUploadSchema = Joi.object({
   teamId: idField,
   descripcion: Joi.string().allow("").optional(),
@@ -113,6 +117,7 @@ module.exports = {
   emptyQuerySchema,
   evidenceCreateSubfolderSchema,
   evidenceListQuerySchema,
+  evidenceRenameFolderSchema,
   evidenceTeamIdParamSchema,
   evidenceUploadSchema,
   projectCreateSchema,

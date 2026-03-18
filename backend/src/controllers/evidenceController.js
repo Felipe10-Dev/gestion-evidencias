@@ -173,6 +173,37 @@ const createTeamSubfolder = async (req, res) => {
   }
 };
 
+const renameDriveFolderById = async (req, res) => {
+  try {
+    const { folderId } = req.params;
+    const nombre = (req.body.nombre || "").trim();
+
+    if (!folderId) {
+      return res.status(400).json({ error: "folderId es requerido" });
+    }
+
+    if (!nombre) {
+      return res.status(400).json({ error: "nombre es requerido" });
+    }
+
+    const drive = getGoogleDriveClient();
+
+    await drive.files.update({
+      fileId: folderId,
+      resource: { name: nombre },
+      fields: "id, name",
+    });
+
+    return res.json({
+      id: folderId,
+      name: nombre,
+      driveUrl: `https://drive.google.com/drive/folders/${folderId}`,
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
 const uploadEvidence = async (req, res) => {
   try {
     const { teamId, descripcion, etapa } = req.body;
@@ -650,6 +681,7 @@ module.exports = {
   uploadEvidence,
   getTeamSubfolders,
   createTeamSubfolder,
+  renameDriveFolderById,
   getEvidences,
   getEvidenceSummaryByProject,
   getDriveFolders,

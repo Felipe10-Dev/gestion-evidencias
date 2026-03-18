@@ -5,6 +5,7 @@ const {
 	uploadEvidence,
 	getTeamSubfolders,
 	createTeamSubfolder,
+	renameDriveFolderById,
 	getEvidences,
 	getEvidenceSummaryByProject,
 	getDriveFolders,
@@ -22,6 +23,7 @@ const {
 	emptyQuerySchema,
 	evidenceCreateSubfolderSchema,
 	evidenceListQuerySchema,
+	evidenceRenameFolderSchema,
 	evidenceTeamIdParamSchema,
 	evidenceUploadSchema,
 } = require("../validation/bodySchemas");
@@ -29,6 +31,7 @@ const {
 router.post("/", authMiddleware, validateQuery(emptyQuerySchema), upload.single("archivo"), validateBody(evidenceUploadSchema), uploadEvidence);
 router.get("/team/:teamId/subfolders", authMiddleware, validateParams(evidenceTeamIdParamSchema), validateQuery(emptyQuerySchema), getTeamSubfolders);
 router.post("/team/:teamId/subfolders", authMiddleware, validateParams(evidenceTeamIdParamSchema), validateQuery(emptyQuerySchema), validateBody(evidenceCreateSubfolderSchema), createTeamSubfolder);
+router.patch("/folders/:folderId", authMiddleware, validateParams(driveFolderIdParamSchema), validateQuery(emptyQuerySchema), validateBody(evidenceRenameFolderSchema), renameDriveFolderById);
 
 router.get("/", authMiddleware, validateQuery(evidenceListQuerySchema), getEvidences);
 router.get("/summary/projects", authMiddleware, validateQuery(emptyQuerySchema), getEvidenceSummaryByProject);

@@ -5,5 +5,7 @@ export const evidencesService = {
   getDriveTree: () => apiClient.get('/evidences/drive-tree'),
   createTeamSubfolder: (teamId, nombre) =>
     apiClient.post(`/evidences/team/${teamId}/subfolders`, { nombre }),
+  renameFolder: (folderId, nombre) =>
+    apiClient.patch(`/evidences/folders/${folderId}`, { nombre }),
   removeFolder: (folderId) => apiClient.delete(`/evidences/folders/${folderId}`),
 }
