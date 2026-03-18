@@ -200,26 +200,6 @@ export function AppShell({ children }) {
             ))}
           </nav>
 
-          <div className="panel-surface mt-5 rounded-xl p-3">
-            <p className="text-sm font-bold text-slate-900">{user?.nombre}</p>
-            <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{user?.rol}</p>
-            <button
-              type="button"
-              onClick={() => {
-                setIsMobileNavOpen(false)
-                logout()
-                router.push('/login')
-              }}
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-100"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" className="h-4 w-4 text-slate-400">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M14 7V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h5a2 2 0 0 0 2-2v-2" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10 12h10" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="m17 7 5 5-5 5" />
-              </svg>
-              Cerrar sesión
-            </button>
-          </div>
         </aside>
       </div>
 
