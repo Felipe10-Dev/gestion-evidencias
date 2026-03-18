@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -12,10 +13,17 @@ import '../models/team_model.dart';
 
 class ApiService {
   static const String _apiUrlOverride = String.fromEnvironment('API_URL');
+  static const String _productionApiUrl =
+      'https://gestion-evidencias-production.up.railway.app/api';
+  static const Duration _requestTimeout = Duration(seconds: 20);
 
   static String get baseUrl {
     if (_apiUrlOverride.isNotEmpty) {
-      return _apiUrlOverride;
+      return _normalizeBaseUrl(_apiUrlOverride);
+    }
+
+    if (kReleaseMode) {
+      return _productionApiUrl;
     }
 
     if (kIsWeb) {
@@ -25,6 +33,64 @@ class ApiService {
       return 'http://10.0.2.2:3000/api';
     }
     return 'http://localhost:3000/api';
+  }
+
+  static String _normalizeBaseUrl(String value) =>
+      value.endsWith('/') ? value.substring(0, value.length - 1) : value;
+
+  static Future<http.Response> _get(
+    Uri uri, {
+    Map<String, String>? headers,
+  }) async {
+    try {
+      return await http
+          .get(uri, headers: headers)
+          .timeout(_requestTimeout);
+    } on TimeoutException {
+      throw Exception(
+        'Tiempo de espera agotado. Verifica tu conexion o el servidor.',
+      );
+    } on SocketException {
+      throw Exception(
+        'No se pudo conectar con el servidor. Revisa internet y URL del API.',
+      );
+    }
+  }
+
+  static Future<http.Response> _post(
+    Uri uri, {
+    Map<String, String>? headers,
+    Object? body,
+  }) async {
+    try {
+      return await http
+          .post(uri, headers: headers, body: body)
+          .timeout(_requestTimeout);
+    } on TimeoutException {
+      throw Exception(
+        'Tiempo de espera agotado. Verifica tu conexion o el servidor.',
+      );
+    } on SocketException {
+      throw Exception(
+        'No se pudo conectar con el servidor. Revisa internet y URL del API.',
+      );
+    }
+  }
+
+  static Future<http.StreamedResponse> _sendMultipart(
+    http.MultipartRequest request,
+  ) async {
+    try {
+      return await request.send().timeout(_requestTimeout);
+    } on TimeoutException {
+      throw Exception(
+        'Tiempo de espera agotado al subir evidencia. Intenta de nuevo.',
+      );
+    } on SocketException {
+      throw Exception(
+        'No se pudo conectar con el servidor durante la carga.',
+      );
+    }
   }
 
   static Map<String, String> _headers(String token) {
@@ -40,7 +106,7 @@ class ApiService {
     required String email,
     required String password,
   }) async {
-    final response = await http.post(
+    final response = await _post(
       _uri('/auth/login'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'password': password}),
@@ -68,7 +134,7 @@ class ApiService {
   }
 
   static Future<List<ProjectModel>> getProjects(String token) async {
-    final response = await http.get(
+    final response = await _get(
       _uri('/projects'),
       headers: _headers(token),
     );
@@ -83,7 +149,7 @@ class ApiService {
   }
 
   static Future<List<TeamModel>> getTeams(String token) async {
-    final response = await http.get(_uri('/teams'), headers: _headers(token));
+    final response = await _get(_uri('/teams'), headers: _headers(token));
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return _tryDecodeList(
@@ -98,7 +164,7 @@ class ApiService {
     required String token,
     required String teamId,
   }) async {
-    final response = await http.get(
+    final response = await _get(
       _uri('/evidences/team/$teamId/subfolders'),
       headers: _headers(token),
     );
@@ -117,7 +183,7 @@ class ApiService {
     required String nombre,
     required String projectId,
   }) async {
-    final response = await http.post(
+    final response = await _post(
       _uri('/teams'),
       headers: _headers(token),
       body: jsonEncode({'nombre': nombre, 'projectId': projectId}),
@@ -150,7 +216,7 @@ class ApiService {
       await http.MultipartFile.fromPath('archivo', imageFile.path),
     );
 
-    final streamed = await request.send();
+    final streamed = await _sendMultipart(request);
     final response = await http.Response.fromStream(streamed);
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
