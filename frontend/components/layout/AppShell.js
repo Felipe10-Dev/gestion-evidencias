@@ -297,19 +297,13 @@ export function AppShell({ children }) {
 
                   {isUserMenuOpen && (
                     <div className="panel-surface absolute right-0 z-30 mt-2 w-56 rounded-xl p-3" role="menu">
-                      <div className="px-1 text-center">
-                        <p className="text-sm font-bold text-slate-900">{user?.nombre}</p>
-                        <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          {user?.rol}
-                        </p>
-                      </div>
                       <button
                         onClick={() => {
                           setIsUserMenuOpen(false)
                           logout()
                           router.push('/login')
                         }}
-                        className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-100"
+                        className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-100"
                         role="menuitem"
                       >
                         <svg
