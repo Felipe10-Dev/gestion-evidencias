@@ -1,6 +1,7 @@
 const Joi = require("joi");
 
 const idField = Joi.string().trim().min(1).required();
+const optionalIdField = Joi.string().trim().min(1);
 
 const authRegisterSchema = Joi.object({
   nombre: Joi.string().trim().min(1).required(),
@@ -33,8 +34,8 @@ const projectUpdateSchema = Joi.object({
 
 const teamCreateSchema = Joi.object({
   nombre: Joi.string().trim().min(1).required(),
-  projectId: idField,
-  ProjectId: idField,
+  projectId: optionalIdField,
+  ProjectId: optionalIdField,
 }).xor("projectId", "ProjectId");
 
 const teamUpdateSchema = Joi.object({
@@ -42,8 +43,8 @@ const teamUpdateSchema = Joi.object({
 });
 
 const teamAssignProjectSchema = Joi.object({
-  projectId: idField,
-  ProjectId: idField,
+  projectId: optionalIdField,
+  ProjectId: optionalIdField,
 }).xor("projectId", "ProjectId");
 
 const evidenceCreateSubfolderSchema = Joi.object({
