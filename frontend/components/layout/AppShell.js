@@ -52,6 +52,20 @@ function NavIcon({ href, isActive }) {
   )
 }
 
+function getRoleLabel(role) {
+  if (role === 'admin') return 'Administrador'
+  if (role === 'tecnico') return 'Tecnico'
+  return role || 'Usuario'
+}
+
+function getUserInitials(name) {
+  const normalizedName = (name || '').trim()
+  if (!normalizedName) return 'US'
+
+  const parts = normalizedName.split(/\s+/).slice(0, 2)
+  return parts.map((part) => part[0]?.toUpperCase() || '').join('') || 'US'
+}
+
 export function AppShell({ children }) {
   const router = useRouter()
   const { isAuthenticated, isReady, logout, user } = useAuth()
@@ -296,14 +310,26 @@ export function AppShell({ children }) {
                   </button>
 
                   {isUserMenuOpen && (
-                    <div className="panel-surface absolute right-0 z-30 mt-2 w-56 rounded-xl p-3" role="menu">
+                    <div className="panel-surface absolute right-0 z-30 mt-2 w-72 rounded-2xl border border-blue-100 bg-white p-4 shadow-[0_25px_60px_-35px_rgba(15,23,42,0.55)]" role="menu">
+                      <div className="mb-3 flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/70 p-3">
+                        <div className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-blue-400 text-sm font-bold text-white shadow-sm">
+                          {getUserInitials(user?.nombre)}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-bold text-slate-900">{user?.nombre || 'Usuario'}</p>
+                          <p className="mt-1 inline-flex rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-blue-700">
+                            {getRoleLabel(user?.rol)}
+                          </p>
+                        </div>
+                      </div>
+
                       <button
                         onClick={() => {
                           setIsUserMenuOpen(false)
                           logout()
                           router.push('/login')
                         }}
-                        className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-100"
+                        className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm font-semibold text-red-600 transition hover:border-red-300 hover:bg-red-100"
                         role="menuitem"
                       >
                         <svg
