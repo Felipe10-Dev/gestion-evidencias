@@ -290,8 +290,8 @@ export function UsersPage() {
 
               <FormField label="Rol">
                 <SelectInput value={formValues.rol} onChange={handleChange('rol')}>
-                  <option value="tecnico">Técnico (solo app)</option>
-                  <option value="admin">Administrador (web + app)</option>
+                  <option value="tecnico">Técnico</option>
+                  <option value="admin">Administrador</option>
                 </SelectInput>
               </FormField>
 
