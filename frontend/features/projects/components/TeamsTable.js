@@ -1,3 +1,17 @@
+function toDisplayText(value, fallback = 'Sin nombre') {
+  if (typeof value === 'string' || typeof value === 'number') {
+    return String(value)
+  }
+
+  if (value && typeof value === 'object') {
+    if ('nombre' in value) {
+      return toDisplayText(value.nombre, fallback)
+    }
+  }
+
+  return fallback
+}
+
 export function TeamsTable({ teams, onEdit, onDelete }) {
   const canManage = Boolean(onEdit || onDelete)
 
@@ -14,8 +28,8 @@ export function TeamsTable({ teams, onEdit, onDelete }) {
         </thead>
         <tbody>
           {teams.map((team) => (
-            <tr key={team.id} className="border-t border-slate-100 hover:bg-white/70">
-              <td className="px-6 py-4 font-semibold text-slate-800">{team.nombre}</td>
+            <tr key={team.id || toDisplayText(team?.nombre, 'team')} className="border-t border-slate-100 hover:bg-white/70">
+              <td className="px-6 py-4 font-semibold text-slate-800">{toDisplayText(team?.nombre)}</td>
               {canManage && (
                 <td className="px-6 py-4">
                   <div className="flex items-center justify-end gap-1">

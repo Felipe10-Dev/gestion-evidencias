@@ -14,6 +14,28 @@ import { useAsyncData } from '@/hooks/useAsyncData'
 import { projectsService } from '@/services/api/projects.service'
 import { teamsService } from '@/services/api/teams.service'
 
+function toDisplayText(value, fallback = '') {
+  if (typeof value === 'string' || typeof value === 'number') {
+    return String(value)
+  }
+
+  if (value && typeof value === 'object') {
+    if ('nombre' in value) {
+      return toDisplayText(value.nombre, fallback)
+    }
+
+    if ('descripcion' in value) {
+      return toDisplayText(value.descripcion, fallback)
+    }
+
+    if ('message' in value) {
+      return toDisplayText(value.message, fallback)
+    }
+  }
+
+  return fallback
+}
+
 export function ProjectDetailPage({ projectId }) {
   const { user } = useAuth()
   const canManageTeams = user?.rol === 'admin'
@@ -44,6 +66,8 @@ export function ProjectDetailPage({ projectId }) {
   })
 
   const teams = Array.isArray(data?.teams) ? data.teams.filter(Boolean) : []
+  const projectName = toDisplayText(data?.project?.nombre, 'Proyecto')
+  const projectDescription = toDisplayText(data?.project?.descripcion)
 
   const handleRequestDelete = (team) => {
     setTeamPendingDelete(team)
@@ -70,7 +94,7 @@ export function ProjectDetailPage({ projectId }) {
 
       showToast({
         title: 'Equipo eliminado',
-        description: `"${teamPendingDelete.nombre}" fue eliminado correctamente.`,
+        description: `"${toDisplayText(teamPendingDelete?.nombre, 'Equipo')}" fue eliminado correctamente.`,
       })
       setTeamPendingDelete(null)
     } catch {
@@ -117,10 +141,10 @@ export function ProjectDetailPage({ projectId }) {
       setIsCreateModalOpen(false)
       showToast({
         title: 'Equipo creado con éxito',
-        description: `${teamName} quedó vinculado a ${data.project?.nombre || 'este proyecto'}.`,
+        description: `${toDisplayText(teamName, 'El equipo')} quedó vinculado a ${projectName || 'este proyecto'}.`,
       })
     } catch (error) {
-      setCreateErrorMessage(error.response?.data?.error || 'Error al crear equipo')
+      setCreateErrorMessage(toDisplayText(error.response?.data?.error, 'Error al crear equipo'))
     } finally {
       setIsCreatingTeam(false)
     }
@@ -141,15 +165,15 @@ export function ProjectDetailPage({ projectId }) {
       <Breadcrumbs
         items={[
           { href: '/proyectos', label: 'Proyectos' },
-          { label: data.project.nombre },
+          { label: projectName },
         ]}
       />
 
       <div className="panel-surface mb-6 rounded-2xl p-6 md:p-7">
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Proyecto</p>
-        <h1 className="mt-2 text-3xl font-bold leading-tight text-slate-900">{data.project.nombre}</h1>
-        {data.project.descripcion && (
-          <p className="mt-3 max-w-3xl text-lg text-slate-600">{data.project.descripcion}</p>
+        <h1 className="mt-2 text-3xl font-bold leading-tight text-slate-900">{projectName}</h1>
+        {projectDescription && (
+          <p className="mt-3 max-w-3xl text-lg text-slate-600">{projectDescription}</p>
         )}
       </div>
 
@@ -192,7 +216,7 @@ export function ProjectDetailPage({ projectId }) {
           isOpen={!!teamPendingDelete}
           isSubmitting={!!deletingTeamId}
           title="¿Eliminar equipo?"
-          description={`El equipo "${teamPendingDelete?.nombre}" será eliminado permanentemente. Las evidencias asociadas quedarán sin equipo asignado.`}
+          description={`El equipo "${toDisplayText(teamPendingDelete?.nombre, 'Equipo')}" será eliminado permanentemente. Las evidencias asociadas quedarán sin equipo asignado.`}
           confirmLabel="Sí, eliminar"
           onClose={handleCloseDeleteModal}
           onConfirm={handleDeleteTeam}
