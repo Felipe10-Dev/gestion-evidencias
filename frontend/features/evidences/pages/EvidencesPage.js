@@ -5,6 +5,7 @@ import { FeedbackMessage } from '@/components/ui/FeedbackMessage'
 import { FormField, TextInput } from '@/components/ui/FormField'
 import { LoadingState } from '@/components/ui/LoadingState'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
+import { useToast } from '@/context/toast/ToastContext'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { evidencesService } from '@/services/api/evidences.service'
 
@@ -148,6 +149,7 @@ function getApiErrorMessage(error, fallback) {
 }
 
 export function EvidencesPage() {
+  const { showToast } = useToast()
   const [deletingFolderId, setDeletingFolderId] = useState(null)
   const [pendingDelete, setPendingDelete] = useState(null)
   const [isReferenceModalOpen, setIsReferenceModalOpen] = useState(false)
@@ -249,8 +251,19 @@ export function EvidencesPage() {
       })
 
       setPendingDelete(null)
+
+      if (level === 'reference') {
+        showToast({
+          title: 'Referencia eliminada',
+          description: `"${pendingDelete.nombre}" se eliminó correctamente.`,
+        })
+      }
     } catch (error) {
-      window.alert(getApiErrorMessage(error, 'No se pudo eliminar la carpeta'))
+      showToast({
+        title: 'Error al eliminar',
+        description: getApiErrorMessage(error, 'No se pudo eliminar la carpeta'),
+        tone: 'error',
+      })
     } finally {
       setDeletingFolderId(null)
     }
@@ -258,7 +271,11 @@ export function EvidencesPage() {
 
   const handleOpenCreateReferenceModal = (projectId, team) => {
     if (!team?.appTeamId) {
-      window.alert('Este equipo no esta vinculado a la app (falta appTeamId).')
+      showToast({
+        title: 'Equipo no vinculado',
+        description: 'Este equipo no esta vinculado a la app (falta appTeamId).',
+        tone: 'error',
+      })
       return
     }
 
@@ -332,6 +349,10 @@ export function EvidencesPage() {
       }))
 
       handleCloseCreateReferenceModal()
+      showToast({
+        title: 'Referencia creada',
+        description: `${newReference.name} fue creada correctamente.`,
+      })
     } catch (error) {
       setReferenceErrorMessage(getApiErrorMessage(error, 'No se pudo crear la referencia'))
     } finally {
@@ -386,6 +407,10 @@ export function EvidencesPage() {
       }))
 
       handleCloseEditReferenceModal()
+      showToast({
+        title: 'Referencia actualizada',
+        description: `${renamedReference.name} fue actualizada correctamente.`,
+      })
     } catch (error) {
       setReferenceErrorMessage(getApiErrorMessage(error, 'No se pudo editar la referencia'))
     } finally {
