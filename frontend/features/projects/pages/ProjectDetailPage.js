@@ -36,12 +36,14 @@ export function ProjectDetailPage({ projectId }) {
 
     return {
       project: projectResponse.data,
-      teams: teamsResponse.data,
+      teams: Array.isArray(teamsResponse.data) ? teamsResponse.data : [],
     }
   }, [projectId], {
     project: null,
     teams: [],
   })
+
+  const teams = Array.isArray(data?.teams) ? data.teams.filter(Boolean) : []
 
   const handleRequestDelete = (team) => {
     setTeamPendingDelete(team)
@@ -58,10 +60,14 @@ export function ProjectDetailPage({ projectId }) {
 
     try {
       await teamsService.remove(teamPendingDelete.id)
+
+      const teamsResponse = await teamsService.getByProject(projectId)
+
       setData((prev) => ({
         ...prev,
-        teams: prev.teams.filter((t) => t.id !== teamPendingDelete.id),
+        teams: Array.isArray(teamsResponse.data) ? teamsResponse.data : [],
       }))
+
       showToast({
         title: 'Equipo eliminado',
         description: `"${teamPendingDelete.nombre}" fue eliminado correctamente.`,
@@ -99,12 +105,13 @@ export function ProjectDetailPage({ projectId }) {
     setIsCreatingTeam(true)
 
     try {
-      const response = await teamsService.create(teamName, projectId)
-      const createdTeam = response.data
+      await teamsService.create(teamName, projectId)
+
+      const teamsResponse = await teamsService.getByProject(projectId)
 
       setData((prev) => ({
         ...prev,
-        teams: [...prev.teams, createdTeam],
+        teams: Array.isArray(teamsResponse.data) ? teamsResponse.data : [],
       }))
 
       setIsCreateModalOpen(false)
@@ -147,7 +154,7 @@ export function ProjectDetailPage({ projectId }) {
       </div>
 
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-slate-800">Equipos ({data.teams.length})</h2>
+        <h2 className="text-lg font-semibold text-slate-800">Equipos ({teams.length})</h2>
         {canManageTeams && (
           <button
             type="button"
@@ -159,7 +166,7 @@ export function ProjectDetailPage({ projectId }) {
         )}
       </div>
 
-      {data.teams.length === 0 ? (
+      {teams.length === 0 ? (
         <EmptyState
           title="No hay equipos en este proyecto"
           action={canManageTeams ? (
@@ -174,7 +181,7 @@ export function ProjectDetailPage({ projectId }) {
         />
       ) : (
         <TeamsTable
-          teams={data.teams}
+          teams={teams}
           onEdit={canManageTeams ? handleEditTeam : undefined}
           onDelete={canManageTeams ? handleRequestDelete : undefined}
         />
