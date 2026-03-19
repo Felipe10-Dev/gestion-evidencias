@@ -11,6 +11,7 @@ import { TeamsTable } from '@/features/projects/components/TeamsTable'
 import { useToast } from '@/context/toast/ToastContext'
 import { useAuth } from '@/context/auth/AuthContext'
 import { useAsyncData } from '@/hooks/useAsyncData'
+import { projectsService } from '@/services/api/projects.service'
 import { teamsService } from '@/services/api/teams.service'
 
 function toDisplayText(value, fallback = '') {
