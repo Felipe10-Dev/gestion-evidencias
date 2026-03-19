@@ -163,9 +163,15 @@ class ApiService {
       );
     }
 
-    throw Exception(
-      (data['message'] ?? 'No se pudo iniciar sesion').toString(),
-    );
+    if (response.statusCode == 401 || response.statusCode == 403) {
+      throw Exception('Credenciales invalidas');
+    }
+
+    final message =
+        (data['message'] ?? data['error'] ?? 'No se pudo iniciar sesion')
+            .toString();
+
+    throw Exception(message);
   }
 
   static Future<List<ProjectModel>> getProjects(String token) async {
