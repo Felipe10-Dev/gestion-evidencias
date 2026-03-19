@@ -300,6 +300,49 @@ class ApiService {
     throw Exception((body['error'] ?? 'No se pudo crear equipo').toString());
   }
 
+  static Future<void> updateTeam({
+    required String token,
+    required String id,
+    required String nombre,
+    required String projectId,
+  }) async {
+    final response = await _put(
+      _uri('/teams/$id'),
+      headers: _headers(token),
+      body: jsonEncode({'nombre': nombre, 'projectId': projectId}),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return;
+    }
+
+    final body = _tryDecodeMap(response.body);
+    throw Exception(
+      (body['error'] ?? body['message'] ?? 'No se pudo actualizar equipo')
+          .toString(),
+    );
+  }
+
+  static Future<void> deleteTeam({
+    required String token,
+    required String id,
+  }) async {
+    final response = await _delete(
+      _uri('/teams/$id'),
+      headers: _headers(token),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return;
+    }
+
+    final body = _tryDecodeMap(response.body);
+    throw Exception(
+      (body['error'] ?? body['message'] ?? 'No se pudo eliminar equipo')
+          .toString(),
+    );
+  }
+
   static Future<void> uploadEvidence({
     required String token,
     required String teamId,

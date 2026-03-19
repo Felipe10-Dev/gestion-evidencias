@@ -148,7 +148,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final tabs = [
       ProjectsTab(token: widget.token, user: _user),
-      TeamsTab(token: widget.token),
+      TeamsTab(token: widget.token, user: _user),
       UploadEvidenceTab(token: widget.token),
     ];
 
