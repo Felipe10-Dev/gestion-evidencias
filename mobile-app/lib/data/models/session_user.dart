@@ -8,6 +8,8 @@ class SessionUser {
 
   bool get hasData => nombre.isNotEmpty || rol.isNotEmpty;
 
+  bool get isAdmin => rol == 'admin';
+
   String get rolLabel {
     switch (rol) {
       case 'admin':

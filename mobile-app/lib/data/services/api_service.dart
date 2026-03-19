@@ -43,9 +43,7 @@ class ApiService {
     Map<String, String>? headers,
   }) async {
     try {
-      return await http
-          .get(uri, headers: headers)
-          .timeout(_requestTimeout);
+      return await http.get(uri, headers: headers).timeout(_requestTimeout);
     } on TimeoutException {
       throw Exception(
         'Tiempo de espera agotado. Verifica tu conexion o el servidor.',
@@ -87,9 +85,7 @@ class ApiService {
         'Tiempo de espera agotado al subir evidencia. Intenta de nuevo.',
       );
     } on SocketException {
-      throw Exception(
-        'No se pudo conectar con el servidor durante la carga.',
-      );
+      throw Exception('No se pudo conectar con el servidor durante la carga.');
     }
   }
 
@@ -134,10 +130,7 @@ class ApiService {
   }
 
   static Future<List<ProjectModel>> getProjects(String token) async {
-    final response = await _get(
-      _uri('/projects'),
-      headers: _headers(token),
-    );
+    final response = await _get(_uri('/projects'), headers: _headers(token));
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return _tryDecodeList(
@@ -146,6 +139,28 @@ class ApiService {
     }
 
     throw Exception('No se pudieron cargar proyectos');
+  }
+
+  static Future<ProjectModel> createProject({
+    required String token,
+    required String nombre,
+    String descripcion = '',
+  }) async {
+    final response = await _post(
+      _uri('/projects'),
+      headers: _headers(token),
+      body: jsonEncode({'nombre': nombre, 'descripcion': descripcion}),
+    );
+
+    final body = _tryDecodeMap(response.body);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return ProjectModel.fromJson(body);
+    }
+
+    throw Exception(
+      (body['error'] ?? body['message'] ?? 'No se pudo crear proyecto')
+          .toString(),
+    );
   }
 
   static Future<List<TeamModel>> getTeams(String token) async {

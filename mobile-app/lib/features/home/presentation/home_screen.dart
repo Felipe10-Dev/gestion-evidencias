@@ -147,7 +147,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final tabs = [
-      ProjectsTab(token: widget.token),
+      ProjectsTab(token: widget.token, user: _user),
       TeamsTab(token: widget.token),
       UploadEvidenceTab(token: widget.token),
     ];
