@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -21,6 +23,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _tab = 0;
   SessionUser _user = const SessionUser.empty();
+  Timer? _inactivityTimer;
+  static const _kSessionTimeout = Duration(minutes: 30);
 
   @override
   void initState() {
@@ -29,12 +33,33 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!_user.hasData) {
       _loadUser();
     }
+    _resetInactivityTimer();
+  }
+
+  void _resetInactivityTimer() {
+    _inactivityTimer?.cancel();
+    _inactivityTimer = Timer(_kSessionTimeout, _onSessionTimeout);
+  }
+
+  Future<void> _onSessionTimeout() async {
+    await SessionStore.clear();
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (_) => false,
+    );
   }
 
   Future<void> _loadUser() async {
     final user = await SessionStore.getUser();
     if (!mounted || user == null) return;
     setState(() => _user = user);
+  }
+
+  @override
+  void dispose() {
+    _inactivityTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _logout() async {
@@ -152,7 +177,10 @@ class _HomeScreenState extends State<HomeScreen> {
       UploadEvidenceTab(token: widget.token),
     ];
 
-    return Scaffold(
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerDown: (_) => _resetInactivityTimer(),
+      child: Scaffold(
       backgroundColor: AppColors.surfaceSoft,
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -255,6 +283,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 }
