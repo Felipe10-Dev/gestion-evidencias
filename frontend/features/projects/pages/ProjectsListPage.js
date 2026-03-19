@@ -12,6 +12,18 @@ import { useAsyncData } from '@/hooks/useAsyncData'
 import { useAuth } from '@/context/auth/AuthContext'
 import { projectsService } from '@/services/api/projects.service'
 
+function normalizeProjectsResponse(payload) {
+  if (Array.isArray(payload)) {
+    return payload
+  }
+
+  if (Array.isArray(payload?.data)) {
+    return payload.data
+  }
+
+  return []
+}
+
 export function ProjectsListPage() {
   const { user } = useAuth()
   const canManageProjects = user?.rol === 'admin'
@@ -29,8 +41,15 @@ export function ProjectsListPage() {
   const [projectPendingDelete, setProjectPendingDelete] = useState(null)
   const { data: projects, isLoading, setData: setProjects } = useAsyncData(async () => {
     const response = await projectsService.getAll()
-    return response.data
+    return normalizeProjectsResponse(response.data)
   }, [], [])
+
+  const refreshProjects = async () => {
+    const response = await projectsService.getAll()
+    const nextProjects = normalizeProjectsResponse(response.data)
+    setProjects(nextProjects)
+    return nextProjects
+  }
 
   const handleChange = (fieldName) => (event) => {
     setFormValues((currentValues) => ({
@@ -71,10 +90,8 @@ export function ProjectsListPage() {
     setIsCreatingProject(true)
 
     try {
-      const response = await projectsService.create(formValues.nombre, formValues.descripcion)
-      const createdProject = response.data
-
-      setProjects((currentProjects) => [createdProject, ...currentProjects])
+      await projectsService.create(formValues.nombre, formValues.descripcion)
+      await refreshProjects()
       setIsCreateModalOpen(false)
       showToast({
         title: 'Proyecto creado con éxito',
@@ -106,12 +123,7 @@ export function ProjectsListPage() {
 
     try {
       await projectsService.update(projectBeingEdited.id, editFormValues.nombre, editFormValues.descripcion)
-
-      setProjects((currentProjects) => currentProjects.map((project) => (
-        project.id === projectBeingEdited.id
-          ? { ...project, nombre: editFormValues.nombre, descripcion: editFormValues.descripcion }
-          : project
-      )))
+      await refreshProjects()
 
       showToast({
         title: 'Proyecto actualizado',

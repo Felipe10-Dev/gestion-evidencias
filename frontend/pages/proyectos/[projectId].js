@@ -7,5 +7,9 @@ export default function ProjectDetailRoute() {
   const { projectId } = router.query
   const currentProjectId = Array.isArray(projectId) ? projectId[0] : projectId
 
+  if (!router.isReady || !currentProjectId) {
+    return null
+  }
+
   return <ProjectDetailPage projectId={currentProjectId} />
 }
