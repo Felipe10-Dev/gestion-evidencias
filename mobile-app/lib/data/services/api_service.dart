@@ -75,43 +75,6 @@ class ApiService {
     }
   }
 
-  static Future<http.Response> _put(
-    Uri uri, {
-    Map<String, String>? headers,
-    Object? body,
-  }) async {
-    try {
-      return await http
-          .put(uri, headers: headers, body: body)
-          .timeout(_requestTimeout);
-    } on TimeoutException {
-      throw Exception(
-        'Tiempo de espera agotado. Verifica tu conexion o el servidor.',
-      );
-    } on SocketException {
-      throw Exception(
-        'No se pudo conectar con el servidor. Revisa internet y URL del API.',
-      );
-    }
-  }
-
-  static Future<http.Response> _delete(
-    Uri uri, {
-    Map<String, String>? headers,
-  }) async {
-    try {
-      return await http.delete(uri, headers: headers).timeout(_requestTimeout);
-    } on TimeoutException {
-      throw Exception(
-        'Tiempo de espera agotado. Verifica tu conexion o el servidor.',
-      );
-    } on SocketException {
-      throw Exception(
-        'No se pudo conectar con el servidor. Revisa internet y URL del API.',
-      );
-    }
-  }
-
   static Future<http.StreamedResponse> _sendMultipart(
     http.MultipartRequest request,
   ) async {
@@ -196,49 +159,6 @@ class ApiService {
 
     throw Exception(
       (body['error'] ?? body['message'] ?? 'No se pudo crear proyecto')
-          .toString(),
-    );
-  }
-
-  static Future<ProjectModel> updateProject({
-    required String token,
-    required String projectId,
-    required String nombre,
-    String descripcion = '',
-  }) async {
-    final response = await _put(
-      _uri('/projects/$projectId'),
-      headers: _headers(token),
-      body: jsonEncode({'nombre': nombre, 'descripcion': descripcion}),
-    );
-
-    final body = _tryDecodeMap(response.body);
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      return ProjectModel.fromJson(body);
-    }
-
-    throw Exception(
-      (body['error'] ?? body['message'] ?? 'No se pudo actualizar proyecto')
-          .toString(),
-    );
-  }
-
-  static Future<void> deleteProject({
-    required String token,
-    required String projectId,
-  }) async {
-    final response = await _delete(
-      _uri('/projects/$projectId'),
-      headers: _headers(token),
-    );
-
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      return;
-    }
-
-    final body = _tryDecodeMap(response.body);
-    throw Exception(
-      (body['error'] ?? body['message'] ?? 'No se pudo eliminar proyecto')
           .toString(),
     );
   }
