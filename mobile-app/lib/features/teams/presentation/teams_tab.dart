@@ -26,14 +26,6 @@ class _TeamsTabState extends State<TeamsTab> {
 
   bool get _isAdmin => widget.user.isAdmin;
 
-  String _projectName(String pid) {
-    try {
-      return _projects.firstWhere((p) => p.id == pid).nombre;
-    } catch (_) {
-      return '—';
-    }
-  }
-
   @override
   void initState() {
     super.initState();
@@ -542,15 +534,6 @@ class _TeamsTabState extends State<TeamsTab> {
             color: AppColors.ink900,
           ),
         ),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 3),
-          child: Text(
-            _projectName(team.projectId),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: AppColors.ink700, fontSize: 13),
-          ),
-        ),
         trailing: _isAdmin
             ? PopupMenuButton<String>(
                 icon: const Icon(
@@ -606,6 +589,74 @@ class _TeamsTabState extends State<TeamsTab> {
               ),
       ),
     );
+  }
+
+  // ── Grouped sections ──────────────────────────────────────────────────────────
+
+  Widget _buildProjectSectionHeader(ProjectModel project, int teamCount) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Container(
+            width: 4,
+            height: 22,
+            decoration: BoxDecoration(
+              color: AppColors.brandBlue,
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              project.nombre,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AppColors.ink900,
+                fontWeight: FontWeight.w700,
+                fontSize: 15,
+              ),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: AppColors.brandBlue.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              '$teamCount ${teamCount == 1 ? 'equipo' : 'equipos'}',
+              style: const TextStyle(
+                color: AppColors.brandBlue,
+                fontWeight: FontWeight.w700,
+                fontSize: 11,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildGroupedSections() {
+    final Map<String, List<TeamModel>> grouped = {};
+    for (final team in _teams) {
+      grouped.putIfAbsent(team.projectId, () => []).add(team);
+    }
+    final sections = <Widget>[];
+    for (final project in _projects) {
+      final teams = grouped[project.id];
+      if (teams == null || teams.isEmpty) continue;
+      sections.add(_buildProjectSectionHeader(project, teams.length));
+      for (final team in teams) {
+        sections.add(Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: _buildTeamCard(team),
+        ));
+      }
+      sections.add(const SizedBox(height: 8));
+    }
+    return sections;
   }
 
   // ── Build ────────────────────────────────────────────────────────────────────
@@ -670,12 +721,7 @@ class _TeamsTabState extends State<TeamsTab> {
         children: [
           _buildCreateCallToAction(),
           _buildTeamsHeader(),
-          ..._teams.map(
-            (team) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _buildTeamCard(team),
-            ),
-          ),
+          ..._buildGroupedSections(),
         ],
       ),
     );
