@@ -242,7 +242,7 @@ class _ProjectsTabState extends State<ProjectsTab> {
 
   Widget _buildAdminCreateBanner() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [Color(0xFFEAF2FF), Color(0xFFF5F9FF)],
@@ -259,72 +259,288 @@ class _ProjectsTabState extends State<ProjectsTab> {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.brandBlue.withValues(alpha: 0.10),
-                      blurRadius: 16,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.brandBlue.withValues(alpha: 0.10),
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
                 ),
-                child: const Icon(
-                  Icons.add_business_rounded,
-                  color: AppColors.brandBlue,
-                  size: 26,
-                ),
-              ),
-              const SizedBox(width: 14),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Crear proyecto',
-                      style: TextStyle(
-                        color: AppColors.ink900,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 18,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Disponible solo para administradores',
-                      style: TextStyle(color: AppColors.ink700, fontSize: 13),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          const Text(
-            'Agrega nuevos proyectos desde la app sin pasar por el navegador y manten el mismo flujo del panel web.',
-            style: TextStyle(
-              color: AppColors.ink700,
-              fontSize: 13,
-              height: 1.45,
+              ],
+            ),
+            child: const Icon(
+              Icons.add_business_rounded,
+              color: AppColors.brandBlue,
+              size: 24,
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(width: 14),
+          const Expanded(
+            child: Text(
+              'Crear proyecto',
+              style: TextStyle(
+                color: AppColors.ink900,
+                fontWeight: FontWeight.w700,
+                fontSize: 16,
+              ),
+            ),
+          ),
           FilledButton.icon(
             onPressed: _showCreateProjectSheet,
-            icon: const Icon(Icons.add, size: 18),
-            label: const Text('Nuevo proyecto'),
+            icon: const Icon(Icons.add, size: 16),
+            label: const Text('Nuevo'),
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              textStyle: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),
     );
+  }
+
+  // ── Edit ─────────────────────────────────────────────────────────────────
+
+  Future<void> _showEditProjectSheet(ProjectModel project) async {
+    _nameCtrl.text = project.nombre;
+    _descriptionCtrl.text = project.descripcion;
+    var saving = false;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+          ),
+          child: StatefulBuilder(
+            builder: (context, setSheetState) {
+              Future<void> submit() async {
+                final nombre = _nameCtrl.text.trim();
+                if (nombre.isEmpty) {
+                  showAppSnackBar(context, 'Ingresa el nombre del proyecto');
+                  return;
+                }
+                setSheetState(() => saving = true);
+                try {
+                  await ApiService.updateProject(
+                    token: widget.token,
+                    id: project.id,
+                    nombre: nombre,
+                    descripcion: _descriptionCtrl.text.trim(),
+                  );
+                  _nameCtrl.clear();
+                  _descriptionCtrl.clear();
+                  if (!context.mounted) return;
+                  Navigator.of(context).pop();
+                  await _fetch();
+                  if (!context.mounted) return;
+                  showAppSnackBar(context, 'Proyecto actualizado');
+                } catch (error) {
+                  if (context.mounted) showAppSnackBar(context, normalizeError(error));
+                } finally {
+                  if (context.mounted) setSheetState(() => saving = false);
+                }
+              }
+
+              return Container(
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(24, 14, 24, 28),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Center(
+                          child: Container(
+                            width: 42,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: AppColors.ink900.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: AppColors.brandBlue.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: const Icon(
+                                Icons.edit_outlined,
+                                color: AppColors.brandBlue,
+                                size: 22,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            const Text(
+                              'Editar proyecto',
+                              style: TextStyle(
+                                color: AppColors.ink900,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 20,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        TextField(
+                          controller: _nameCtrl,
+                          textInputAction: TextInputAction.next,
+                          decoration: const InputDecoration(
+                            labelText: 'Nombre del proyecto',
+                            prefixIcon: Icon(Icons.assignment_outlined, size: 20),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: _descriptionCtrl,
+                          minLines: 3,
+                          maxLines: 4,
+                          decoration: const InputDecoration(
+                            labelText: 'Descripcion',
+                            alignLabelWithHint: true,
+                            prefixIcon: Icon(Icons.notes_outlined, size: 20),
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        FilledButton.icon(
+                          onPressed: saving ? null : submit,
+                          icon: saving
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.check_circle_outline, size: 18),
+                          label: Text(saving ? 'Guardando...' : 'Guardar cambios'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  // ── Delete ────────────────────────────────────────────────────────────────
+
+  Future<void> _showDeleteConfirm(ProjectModel project) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          icon: Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: AppColors.danger.withValues(alpha: 0.08),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.delete_outline,
+              color: AppColors.danger,
+              size: 26,
+            ),
+          ),
+          title: const Text(
+            'Eliminar proyecto',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 18,
+              color: AppColors.ink900,
+            ),
+          ),
+          content: Text(
+            '\u00BFSeguro que deseas eliminar "${project.nombre}"? Esta acción no se puede deshacer.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.ink700, fontSize: 14),
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+          actions: [
+            OutlinedButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.ink700,
+                side: BorderSide(
+                  color: AppColors.ink900.withValues(alpha: 0.15),
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+              ),
+              child: const Text('Cancelar'),
+            ),
+            const SizedBox(width: 8),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.danger,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+              ),
+              child: const Text('Eliminar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await ApiService.deleteProject(token: widget.token, id: project.id);
+      if (!mounted) return;
+      await _fetch();
+      if (!mounted) return;
+      showAppSnackBar(context, 'Proyecto eliminado');
+    } catch (error) {
+      if (!mounted) return;
+      showAppSnackBar(context, normalizeError(error));
+    }
   }
 
   Widget _buildCreateCallToAction() {
@@ -437,11 +653,55 @@ class _ProjectsTabState extends State<ProjectsTab> {
                 ),
               )
             : null,
-        trailing: const Icon(
-          Icons.chevron_right,
-          color: AppColors.ink300,
-          size: 20,
-        ),
+        trailing: _isAdmin
+            ? PopupMenuButton<String>(
+                icon: const Icon(
+                  Icons.more_vert,
+                  color: AppColors.ink300,
+                  size: 22,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                onSelected: (value) {
+                  if (value == 'edit') _showEditProjectSheet(project);
+                  if (value == 'delete') _showDeleteConfirm(project);
+                },
+                itemBuilder: (_) => [
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.edit_outlined,
+                          color: AppColors.brandBlue,
+                          size: 18,
+                        ),
+                        SizedBox(width: 10),
+                        Text('Editar'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.delete_outline,
+                          color: AppColors.danger,
+                          size: 18,
+                        ),
+                        SizedBox(width: 10),
+                        Text(
+                          'Eliminar',
+                          style: TextStyle(color: AppColors.danger),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              )
+            : const Icon(Icons.chevron_right, color: AppColors.ink300, size: 20),
       ),
     );
   }
