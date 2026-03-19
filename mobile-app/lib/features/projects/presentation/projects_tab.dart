@@ -241,70 +241,75 @@ class _ProjectsTabState extends State<ProjectsTab> {
   }
 
   Widget _buildAdminCreateBanner() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFEAF2FF), Color(0xFFF5F9FF)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.brandBlue.withValues(alpha: 0.12)),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.brandBlue.withValues(alpha: 0.08),
-            blurRadius: 24,
-            offset: const Offset(0, 10),
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: _showCreateProjectSheet,
+        borderRadius: BorderRadius.circular(20),
+        child: Ink(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFEAF2FF), Color(0xFFF5F9FF)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: AppColors.brandBlue.withValues(alpha: 0.15),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.brandBlue.withValues(alpha: 0.08),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.brandBlue.withValues(alpha: 0.10),
-                  blurRadius: 12,
-                  offset: const Offset(0, 6),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.brandBlue,
+                    borderRadius: BorderRadius.circular(13),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.brandBlue.withValues(alpha: 0.35),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.add_business_rounded,
+                    color: Colors.white,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                const Expanded(
+                  child: Text(
+                    'Nuevo proyecto',
+                    style: TextStyle(
+                      color: AppColors.ink900,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+                const Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: AppColors.brandBlue,
+                  size: 15,
                 ),
               ],
             ),
-            child: const Icon(
-              Icons.add_business_rounded,
-              color: AppColors.brandBlue,
-              size: 24,
-            ),
           ),
-          const SizedBox(width: 14),
-          const Expanded(
-            child: Text(
-              'Crear proyecto',
-              style: TextStyle(
-                color: AppColors.ink900,
-                fontWeight: FontWeight.w700,
-                fontSize: 16,
-              ),
-            ),
-          ),
-          FilledButton.icon(
-            onPressed: _showCreateProjectSheet,
-            icon: const Icon(Icons.add, size: 16),
-            label: const Text('Nuevo'),
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              textStyle: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -489,40 +494,41 @@ class _ProjectsTabState extends State<ProjectsTab> {
             textAlign: TextAlign.center,
             style: const TextStyle(color: AppColors.ink700, fontSize: 14),
           ),
-          actionsAlignment: MainAxisAlignment.center,
-          actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+          actionsPadding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
           actions: [
-            OutlinedButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.ink700,
-                side: BorderSide(
-                  color: AppColors.ink900.withValues(alpha: 0.15),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(false),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.ink700,
+                      side: BorderSide(
+                        color: AppColors.ink900.withValues(alpha: 0.15),
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    child: const Text('Cancelar'),
+                  ),
                 ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(true),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.danger,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    child: const Text('Eliminar'),
+                  ),
                 ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
-              ),
-              child: const Text('Cancelar'),
-            ),
-            const SizedBox(width: 8),
-            FilledButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.danger,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
-              ),
-              child: const Text('Eliminar'),
+              ],
             ),
           ],
         );
@@ -560,24 +566,14 @@ class _ProjectsTabState extends State<ProjectsTab> {
       child: Row(
         children: [
           const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'PROYECTOS',
-                  style: TextStyle(
-                    color: AppColors.ink300,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.8,
-                  ),
-                ),
-                SizedBox(height: 6),
-                Text(
-                  'Consulta los proyectos activos',
-                  style: TextStyle(color: AppColors.ink700, fontSize: 13),
-                ),
-              ],
+            child: Text(
+              'PROYECTOS',
+              style: TextStyle(
+                color: AppColors.ink300,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.8,
+              ),
             ),
           ),
           Container(
