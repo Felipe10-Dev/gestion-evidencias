@@ -18,6 +18,7 @@ class ProjectsTab extends StatefulWidget {
 
 class _ProjectsTabState extends State<ProjectsTab> {
   bool _loading = true;
+  bool _processingProject = false;
   List<ProjectModel> _projects = const [];
   final _nameCtrl = TextEditingController();
   final _descriptionCtrl = TextEditingController();
@@ -81,10 +82,60 @@ class _ProjectsTabState extends State<ProjectsTab> {
     }
   }
 
-  Future<void> _showCreateProjectSheet() async {
-    _nameCtrl.clear();
-    _descriptionCtrl.clear();
+  Future<void> _updateProject(ProjectModel project) async {
+    final nombre = _nameCtrl.text.trim();
+    final descripcion = _descriptionCtrl.text.trim();
+
+    if (nombre.isEmpty) {
+      showAppSnackBar(context, 'Ingresa el nombre del proyecto');
+      return;
+    }
+
+    try {
+      await ApiService.updateProject(
+        token: widget.token,
+        projectId: project.id,
+        nombre: nombre,
+        descripcion: descripcion,
+      );
+      _nameCtrl.clear();
+      _descriptionCtrl.clear();
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      await _fetch();
+      if (!mounted) return;
+      showAppSnackBar(context, 'Proyecto actualizado');
+    } catch (error) {
+      if (!mounted) return;
+      showAppSnackBar(context, normalizeError(error));
+    }
+  }
+
+  Future<void> _deleteProject(ProjectModel project) async {
+    setState(() => _processingProject = true);
+    try {
+      await ApiService.deleteProject(
+        token: widget.token,
+        projectId: project.id,
+      );
+      await _fetch();
+      if (!mounted) return;
+      showAppSnackBar(context, 'Proyecto eliminado');
+    } catch (error) {
+      if (!mounted) return;
+      showAppSnackBar(context, normalizeError(error));
+    } finally {
+      if (mounted) {
+        setState(() => _processingProject = false);
+      }
+    }
+  }
+
+  Future<void> _showProjectFormSheet({ProjectModel? project}) async {
+    _nameCtrl.text = project?.nombre ?? '';
+    _descriptionCtrl.text = project?.descripcion ?? '';
     var saving = false;
+    final isEditing = project != null;
 
     await showModalBottomSheet<void>(
       context: context,
@@ -100,7 +151,11 @@ class _ProjectsTabState extends State<ProjectsTab> {
               Future<void> submit() async {
                 setSheetState(() => saving = true);
                 try {
-                  await _createProject();
+                  if (isEditing) {
+                    await _updateProject(project);
+                  } else {
+                    await _createProject();
+                  }
                 } finally {
                   if (context.mounted) {
                     setSheetState(() => saving = false);
@@ -129,18 +184,23 @@ class _ProjectsTabState extends State<ProjectsTab> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    const Text(
-                      'Nuevo proyecto',
-                      style: TextStyle(
+                    Text(
+                      isEditing ? 'Editar proyecto' : 'Nuevo proyecto',
+                      style: const TextStyle(
                         color: AppColors.ink900,
                         fontWeight: FontWeight.w700,
                         fontSize: 20,
                       ),
                     ),
                     const SizedBox(height: 6),
-                    const Text(
-                      'Crea proyectos directamente desde el celular.',
-                      style: TextStyle(color: AppColors.ink700, fontSize: 13),
+                    Text(
+                      isEditing
+                          ? 'Actualiza el nombre o la descripcion del proyecto.'
+                          : 'Crea proyectos directamente desde el celular.',
+                      style: const TextStyle(
+                        color: AppColors.ink700,
+                        fontSize: 13,
+                      ),
                     ),
                     const SizedBox(height: 18),
                     TextField(
@@ -175,7 +235,13 @@ class _ProjectsTabState extends State<ProjectsTab> {
                               ),
                             )
                           : const Icon(Icons.add_circle_outline, size: 18),
-                      label: Text(saving ? 'Guardando...' : 'Crear proyecto'),
+                      label: Text(
+                        saving
+                            ? 'Guardando...'
+                            : isEditing
+                            ? 'Guardar cambios'
+                            : 'Crear proyecto',
+                      ),
                     ),
                   ],
                 ),
@@ -245,13 +311,56 @@ class _ProjectsTabState extends State<ProjectsTab> {
               ),
             ),
             FilledButton(
-              onPressed: _showCreateProjectSheet,
+              onPressed: _processingProject
+                  ? null
+                  : () => _showProjectFormSheet(),
               child: const Text('Nuevo'),
             ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _showDeleteDialog(ProjectModel project) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Eliminar proyecto'),
+          content: Text(
+            'Se eliminara ${project.nombre} y sus equipos asociados. Esta accion tambien borrara las carpetas conectadas en Drive desde el backend.\n\n¿Deseas continuar?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Eliminar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      await _deleteProject(project);
+    }
+  }
+
+  Future<void> _onAdminActionSelected(
+    ProjectModel project,
+    _ProjectAction action,
+  ) async {
+    switch (action) {
+      case _ProjectAction.edit:
+        await _showProjectFormSheet(project: project);
+      case _ProjectAction.delete:
+        await _showDeleteDialog(project);
+    }
   }
 
   Widget _buildProjectCard(ProjectModel project) {
@@ -273,6 +382,9 @@ class _ProjectsTabState extends State<ProjectsTab> {
           horizontal: 16,
           vertical: 10,
         ),
+        onTap: !_isAdmin || _processingProject
+            ? null
+            : () => _showProjectFormSheet(project: project),
         leading: Container(
           width: 42,
           height: 42,
@@ -305,11 +417,48 @@ class _ProjectsTabState extends State<ProjectsTab> {
                 ),
               )
             : null,
-        trailing: const Icon(
-          Icons.chevron_right,
-          color: AppColors.ink300,
-          size: 20,
-        ),
+        trailing: _isAdmin
+            ? PopupMenuButton<_ProjectAction>(
+                enabled: !_processingProject,
+                onSelected: (action) => _onAdminActionSelected(project, action),
+                itemBuilder: (context) => const [
+                  PopupMenuItem<_ProjectAction>(
+                    value: _ProjectAction.edit,
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.edit_outlined),
+                      title: Text('Editar'),
+                    ),
+                  ),
+                  PopupMenuItem<_ProjectAction>(
+                    value: _ProjectAction.delete,
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.delete_outline),
+                      title: Text('Eliminar'),
+                    ),
+                  ),
+                ],
+                icon: _processingProject
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.ink300,
+                        ),
+                      )
+                    : const Icon(
+                        Icons.more_vert,
+                        color: AppColors.ink300,
+                        size: 20,
+                      ),
+              )
+            : const Icon(
+                Icons.chevron_right,
+                color: AppColors.ink300,
+                size: 20,
+              ),
       ),
     );
   }
@@ -385,3 +534,5 @@ class _ProjectsTabState extends State<ProjectsTab> {
     );
   }
 }
+
+enum _ProjectAction { edit, delete }
