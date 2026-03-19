@@ -21,20 +21,21 @@ function DeleteIcon() {
   )
 }
 
-export function ProjectCard({ canManage = true, isDeleting = false, onDelete, project }) {
+export function ProjectCard({ canManage = true, isDeleting = false, onDelete, onEdit, project }) {
   return (
     <div className="panel-surface rounded-2xl p-6 transition hover:-translate-y-0.5 hover:shadow-xl">
       <div className="mb-4 flex items-start justify-between gap-4">
         <p className="pt-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Proyecto</p>
         {canManage && (
           <div className="flex items-center gap-2">
-            <Link
-              href={`/proyectos/${project.id}/editar`}
+            <button
+              type="button"
+              onClick={() => onEdit?.(project)}
               aria-label={`Editar ${project.nombre}`}
               className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-400 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 active:scale-95"
             >
               <EditIcon />
-            </Link>
+            </button>
             <button
               type="button"
               onClick={() => onDelete?.(project)}

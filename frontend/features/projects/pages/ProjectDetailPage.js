@@ -1,4 +1,3 @@
-import { useRouter } from 'next/router'
 import { useState } from 'react'
 
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs'
@@ -7,11 +6,11 @@ import { FeedbackMessage } from '@/components/ui/FeedbackMessage'
 import { FormField, TextInput } from '@/components/ui/FormField'
 import { LoadingState } from '@/components/ui/LoadingState'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
+import { ModalDialog } from '@/components/ui/ModalDialog'
 import { TeamsTable } from '@/features/projects/components/TeamsTable'
 import { useToast } from '@/context/toast/ToastContext'
 import { useAuth } from '@/context/auth/AuthContext'
 import { useAsyncData } from '@/hooks/useAsyncData'
-import { projectsService } from '@/services/api/projects.service'
 import { teamsService } from '@/services/api/teams.service'
 
 function toDisplayText(value, fallback = '') {
@@ -39,14 +38,17 @@ function toDisplayText(value, fallback = '') {
 export function ProjectDetailPage({ projectId }) {
   const { user } = useAuth()
   const canManageTeams = user?.rol === 'admin'
-  const router = useRouter()
   const { showToast } = useToast()
   const [teamPendingDelete, setTeamPendingDelete] = useState(null)
   const [deletingTeamId, setDeletingTeamId] = useState(null)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isCreatingTeam, setIsCreatingTeam] = useState(false)
+  const [teamBeingEdited, setTeamBeingEdited] = useState(null)
+  const [isUpdatingTeam, setIsUpdatingTeam] = useState(false)
   const [createErrorMessage, setCreateErrorMessage] = useState('')
+  const [editErrorMessage, setEditErrorMessage] = useState('')
   const [teamName, setTeamName] = useState('')
+  const [editTeamName, setEditTeamName] = useState('')
 
   const { data, isLoading, setData } = useAsyncData(async () => {
     if (!projectId) return { project: null, teams: [] }
@@ -109,7 +111,9 @@ export function ProjectDetailPage({ projectId }) {
   }
 
   const handleEditTeam = (team) => {
-    router.push(`/proyectos/equipos/${team.id}/editar?projectId=${projectId}`)
+    setEditErrorMessage('')
+    setTeamBeingEdited(team)
+    setEditTeamName(toDisplayText(team?.nombre))
   }
 
   const handleOpenCreateModal = () => {
@@ -121,6 +125,13 @@ export function ProjectDetailPage({ projectId }) {
   const handleCloseCreateModal = () => {
     if (isCreatingTeam) return
     setIsCreateModalOpen(false)
+  }
+
+  const handleCloseEditModal = () => {
+    if (isUpdatingTeam) return
+    setTeamBeingEdited(null)
+    setEditErrorMessage('')
+    setEditTeamName('')
   }
 
   const handleCreateTeam = async (event) => {
@@ -147,6 +158,45 @@ export function ProjectDetailPage({ projectId }) {
       setCreateErrorMessage(toDisplayText(error.response?.data?.error, 'Error al crear equipo'))
     } finally {
       setIsCreatingTeam(false)
+    }
+  }
+
+  const handleUpdateTeam = async (event) => {
+    event.preventDefault()
+
+    if (!teamBeingEdited) {
+      return
+    }
+
+    const nextTeamName = editTeamName.trim()
+
+    if (!nextTeamName) {
+      setEditErrorMessage('El nombre del equipo es requerido.')
+      return
+    }
+
+    setEditErrorMessage('')
+    setIsUpdatingTeam(true)
+
+    try {
+      await teamsService.update(teamBeingEdited.id, nextTeamName)
+
+      setData((prev) => ({
+        ...prev,
+        teams: prev.teams.map((team) => (
+          team.id === teamBeingEdited.id ? { ...team, nombre: nextTeamName } : team
+        )),
+      }))
+
+      showToast({
+        title: 'Equipo actualizado',
+        description: `Los cambios de "${nextTeamName}" se guardaron correctamente.`,
+      })
+      handleCloseEditModal()
+    } catch {
+      setEditErrorMessage('Ocurrió un error al actualizar el equipo. Intenta de nuevo.')
+    } finally {
+      setIsUpdatingTeam(false)
     }
   }
 
@@ -223,55 +273,71 @@ export function ProjectDetailPage({ projectId }) {
         />
       )}
 
-      {canManageTeams && isCreateModalOpen && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center px-4 py-6 sm:px-6">
+      <ModalDialog
+        isOpen={canManageTeams && isCreateModalOpen}
+        onClose={handleCloseCreateModal}
+        title="Crear nuevo equipo"
+      >
+        <FeedbackMessage message={createErrorMessage} />
+
+        <form onSubmit={handleCreateTeam} className="space-y-6">
+          <FormField label="Nombre del Equipo">
+            <TextInput
+              type="text"
+              value={teamName}
+              onChange={(event) => setTeamName(event.target.value)}
+              placeholder="Ej: Equipo A - Zona Norte"
+              required
+            />
+          </FormField>
+
           <button
-            type="button"
-            aria-label="Cerrar formulario"
-            onClick={handleCloseCreateModal}
-            className="absolute inset-0 bg-slate-950/28 backdrop-blur-[3px]"
-          />
+            type="submit"
+            disabled={isCreatingTeam}
+            className="btn-primary w-full py-2.5 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isCreatingTeam ? 'Creando...' : 'Crear Equipo'}
+          </button>
+        </form>
+      </ModalDialog>
 
-          <div className="panel-surface animated-in relative z-10 w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 md:p-7">
-            <div className="mb-5 flex items-start justify-between gap-4">
-              <h3 className="text-2xl font-bold text-slate-900">Crear nuevo equipo</h3>
-              <button
-                type="button"
-                onClick={handleCloseCreateModal}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-400 transition hover:border-blue-300 hover:text-blue-700"
-                aria-label="Cerrar"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" className="h-4 w-4">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 6 18 18" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M18 6 6 18" />
-                </svg>
-              </button>
-            </div>
+      <ModalDialog
+        isOpen={canManageTeams && Boolean(teamBeingEdited)}
+        onClose={handleCloseEditModal}
+        title="Editar equipo"
+      >
+        <FeedbackMessage message={editErrorMessage} />
 
-            <FeedbackMessage message={createErrorMessage} />
+        <form onSubmit={handleUpdateTeam} className="space-y-6">
+          <FormField label="Nombre del Equipo">
+            <TextInput
+              type="text"
+              value={editTeamName}
+              onChange={(event) => setEditTeamName(event.target.value)}
+              placeholder="Ej: Equipo A - Zona Norte"
+              required
+            />
+          </FormField>
 
-            <form onSubmit={handleCreateTeam} className="space-y-6">
-              <FormField label="Nombre del Equipo">
-                <TextInput
-                  type="text"
-                  value={teamName}
-                  onChange={(event) => setTeamName(event.target.value)}
-                  placeholder="Ej: Equipo A - Zona Norte"
-                  required
-                />
-              </FormField>
-
-              <button
-                type="submit"
-                disabled={isCreatingTeam}
-                className="btn-primary w-full py-2.5 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isCreatingTeam ? 'Creando...' : 'Crear Equipo'}
-              </button>
-            </form>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="submit"
+              disabled={isUpdatingTeam}
+              className="btn-primary px-6 py-2.5 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isUpdatingTeam ? 'Guardando...' : 'Guardar cambios'}
+            </button>
+            <button
+              type="button"
+              onClick={handleCloseEditModal}
+              disabled={isUpdatingTeam}
+              className="btn-soft px-6 py-2.5 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Cancelar
+            </button>
           </div>
-        </div>
-      )}
+        </form>
+      </ModalDialog>
     </>
   )
 }

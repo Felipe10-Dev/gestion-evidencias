@@ -5,6 +5,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { FeedbackMessage } from '@/components/ui/FeedbackMessage'
 import { FormField, TextAreaInput, TextInput } from '@/components/ui/FormField'
 import { LoadingState } from '@/components/ui/LoadingState'
+import { ModalDialog } from '@/components/ui/ModalDialog'
 import { useToast } from '@/context/toast/ToastContext'
 import { ProjectCard } from '@/features/projects/components/ProjectCard'
 import { useAsyncData } from '@/hooks/useAsyncData'
@@ -19,7 +20,11 @@ export function ProjectsListPage() {
   const [createErrorMessage, setCreateErrorMessage] = useState('')
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isCreatingProject, setIsCreatingProject] = useState(false)
+  const [projectBeingEdited, setProjectBeingEdited] = useState(null)
+  const [editErrorMessage, setEditErrorMessage] = useState('')
+  const [isUpdatingProject, setIsUpdatingProject] = useState(false)
   const [formValues, setFormValues] = useState({ nombre: '', descripcion: '' })
+  const [editFormValues, setEditFormValues] = useState({ nombre: '', descripcion: '' })
   const [deletingProjectId, setDeletingProjectId] = useState('')
   const [projectPendingDelete, setProjectPendingDelete] = useState(null)
   const { data: projects, isLoading, setData: setProjects } = useAsyncData(async () => {
@@ -40,9 +45,24 @@ export function ProjectsListPage() {
     setIsCreateModalOpen(true)
   }
 
+  const handleOpenEditModal = (project) => {
+    setEditErrorMessage('')
+    setProjectBeingEdited(project)
+    setEditFormValues({
+      nombre: project?.nombre || '',
+      descripcion: project?.descripcion || '',
+    })
+  }
+
   const handleCloseCreateModal = () => {
     if (isCreatingProject) return
     setIsCreateModalOpen(false)
+  }
+
+  const handleCloseEditModal = () => {
+    if (isUpdatingProject) return
+    setProjectBeingEdited(null)
+    setEditErrorMessage('')
   }
 
   const handleCreateProject = async (event) => {
@@ -64,6 +84,44 @@ export function ProjectsListPage() {
       setCreateErrorMessage(error.response?.data?.error || 'Error al crear proyecto')
     } finally {
       setIsCreatingProject(false)
+    }
+  }
+
+  const handleEditChange = (fieldName) => (event) => {
+    setEditFormValues((currentValues) => ({
+      ...currentValues,
+      [fieldName]: event.target.value,
+    }))
+  }
+
+  const handleUpdateProject = async (event) => {
+    event.preventDefault()
+
+    if (!projectBeingEdited) {
+      return
+    }
+
+    setEditErrorMessage('')
+    setIsUpdatingProject(true)
+
+    try {
+      await projectsService.update(projectBeingEdited.id, editFormValues.nombre, editFormValues.descripcion)
+
+      setProjects((currentProjects) => currentProjects.map((project) => (
+        project.id === projectBeingEdited.id
+          ? { ...project, nombre: editFormValues.nombre, descripcion: editFormValues.descripcion }
+          : project
+      )))
+
+      showToast({
+        title: 'Proyecto actualizado',
+        description: `Los cambios de ${editFormValues.nombre} se guardaron correctamente.`,
+      })
+      handleCloseEditModal()
+    } catch (error) {
+      setEditErrorMessage(error.response?.data?.error || 'Error al actualizar proyecto')
+    } finally {
+      setIsUpdatingProject(false)
     }
   }
 
@@ -150,70 +208,96 @@ export function ProjectsListPage() {
               project={project}
               canManage={canManageProjects}
               isDeleting={deletingProjectId === project.id}
+              onEdit={handleOpenEditModal}
               onDelete={handleRequestDelete}
             />
           ))}
         </div>
       )}
 
-      {canManageProjects && isCreateModalOpen && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center px-4 py-6 sm:px-6">
+      <ModalDialog
+        isOpen={canManageProjects && isCreateModalOpen}
+        onClose={handleCloseCreateModal}
+        title="Crear nuevo proyecto"
+      >
+        <FeedbackMessage message={createErrorMessage} />
+
+        <form onSubmit={handleCreateProject} className="space-y-6">
+          <FormField label="Nombre del Proyecto">
+            <TextInput
+              type="text"
+              value={formValues.nombre}
+              onChange={handleChange('nombre')}
+              placeholder="Ej: Reparación de línea de teléfono"
+              required
+            />
+          </FormField>
+
+          <FormField label="Descripción">
+            <TextAreaInput
+              value={formValues.descripcion}
+              onChange={handleChange('descripcion')}
+              placeholder="Descripción detallada del proyecto"
+              rows="4"
+            />
+          </FormField>
+
           <button
-            type="button"
-            aria-label="Cerrar formulario"
-            onClick={handleCloseCreateModal}
-            className="absolute inset-0 bg-slate-950/28 backdrop-blur-[3px]"
-          />
+            type="submit"
+            disabled={isCreatingProject}
+            className="btn-primary w-full py-2.5 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isCreatingProject ? 'Creando...' : 'Crear Proyecto'}
+          </button>
+        </form>
+      </ModalDialog>
 
-          <div className="panel-surface animated-in relative z-10 w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 md:p-7">
-            <div className="mb-5 flex items-start justify-between gap-4">
-              <h3 className="text-2xl font-bold text-slate-900">Crear nuevo proyecto</h3>
-              <button
-                type="button"
-                onClick={handleCloseCreateModal}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-400 transition hover:border-blue-300 hover:text-blue-700"
-                aria-label="Cerrar"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" className="h-4 w-4">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 6 18 18" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M18 6 6 18" />
-                </svg>
-              </button>
-            </div>
+      <ModalDialog
+        isOpen={canManageProjects && Boolean(projectBeingEdited)}
+        onClose={handleCloseEditModal}
+        title="Editar proyecto"
+      >
+        <FeedbackMessage message={editErrorMessage} />
 
-            <FeedbackMessage message={createErrorMessage} />
+        <form onSubmit={handleUpdateProject} className="space-y-6">
+          <FormField label="Nombre del Proyecto">
+            <TextInput
+              type="text"
+              value={editFormValues.nombre}
+              onChange={handleEditChange('nombre')}
+              placeholder="Ej: Reparación de línea de teléfono"
+              required
+            />
+          </FormField>
 
-            <form onSubmit={handleCreateProject} className="space-y-6">
-              <FormField label="Nombre del Proyecto">
-                <TextInput
-                  type="text"
-                  value={formValues.nombre}
-                  onChange={handleChange('nombre')}
-                  placeholder="Ej: Reparación de línea de teléfono"
-                  required
-                />
-              </FormField>
+          <FormField label="Descripción">
+            <TextAreaInput
+              value={editFormValues.descripcion}
+              onChange={handleEditChange('descripcion')}
+              placeholder="Descripción detallada del proyecto"
+              rows="4"
+            />
+          </FormField>
 
-              <FormField label="Descripción">
-                <TextAreaInput
-                  value={formValues.descripcion}
-                  onChange={handleChange('descripcion')}
-                  placeholder="Descripción detallada del proyecto"
-                  rows="4"
-                />
-              </FormField>
-
-              <button
-                type="submit"
-                disabled={isCreatingProject}
-                className="btn-primary w-full py-2.5 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isCreatingProject ? 'Creando...' : 'Crear Proyecto'}
-              </button>
-            </form>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="submit"
+              disabled={isUpdatingProject}
+              className="btn-primary px-6 py-2.5 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isUpdatingProject ? 'Guardando...' : 'Guardar cambios'}
+            </button>
+            <button
+              type="button"
+              onClick={handleCloseEditModal}
+              disabled={isUpdatingProject}
+              className="btn-soft px-6 py-2.5 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Cancelar
+            </button>
           </div>
-        </div>
-      )}
+        </form>
+      </ModalDialog>
     </>
   )
 }
