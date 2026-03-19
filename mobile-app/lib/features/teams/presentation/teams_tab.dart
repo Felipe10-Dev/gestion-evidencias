@@ -127,7 +127,6 @@ class _TeamsTabState extends State<TeamsTab> {
 
   Future<void> _showEditTeamSheet(TeamModel team) async {
     _nameCtrl.text = team.nombre;
-    var sheetProjectId = team.projectId.isNotEmpty ? team.projectId : _selectedProjectId;
     var saving = false;
 
     await showModalBottomSheet<void>(
@@ -142,8 +141,8 @@ class _TeamsTabState extends State<TeamsTab> {
           builder: (ctx, setSS) {
             Future<void> submit() async {
               final nombre = _nameCtrl.text.trim();
-              if (nombre.isEmpty || sheetProjectId == null) {
-                showAppSnackBar(ctx, 'Completa nombre y proyecto');
+              if (nombre.isEmpty) {
+                showAppSnackBar(ctx, 'Escribe el nombre del equipo');
                 return;
               }
               setSS(() => saving = true);
@@ -152,7 +151,6 @@ class _TeamsTabState extends State<TeamsTab> {
                   token: widget.token,
                   id: team.id,
                   nombre: nombre,
-                  projectId: sheetProjectId!,
                 );
                 _nameCtrl.clear();
                 if (!ctx.mounted) return;
@@ -170,8 +168,6 @@ class _TeamsTabState extends State<TeamsTab> {
             return _buildSheetScaffold(
               icon: Icons.edit_outlined,
               title: 'Editar equipo',
-              projectId: sheetProjectId,
-              onProjectChanged: (v) => setSS(() => sheetProjectId = v),
               saving: saving,
               onSubmit: submit,
               submitLabel: 'Guardar cambios',
@@ -271,8 +267,8 @@ class _TeamsTabState extends State<TeamsTab> {
   Widget _buildSheetScaffold({
     required IconData icon,
     required String title,
-    required String? projectId,
-    required ValueChanged<String?> onProjectChanged,
+    String? projectId,
+    ValueChanged<String?>? onProjectChanged,
     required bool saving,
     required Future<void> Function() onSubmit,
     required String submitLabel,
@@ -332,24 +328,26 @@ class _TeamsTabState extends State<TeamsTab> {
                   prefixIcon: Icon(Icons.group_outlined, size: 20),
                 ),
               ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                key: ValueKey(projectId ?? 'empty'),
-                initialValue: projectId,
-                items: _projects
-                    .map(
-                      (p) => DropdownMenuItem<String>(
-                        value: p.id,
-                        child: Text(p.nombre),
-                      ),
-                    )
-                    .toList(growable: false),
-                onChanged: onProjectChanged,
-                decoration: const InputDecoration(
-                  labelText: 'Proyecto',
-                  prefixIcon: Icon(Icons.assignment_outlined, size: 20),
+              if (onProjectChanged != null) ...[  
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  key: ValueKey(projectId ?? 'empty'),
+                  initialValue: projectId,
+                  items: _projects
+                      .map(
+                        (p) => DropdownMenuItem<String>(
+                          value: p.id,
+                          child: Text(p.nombre),
+                        ),
+                      )
+                      .toList(growable: false),
+                  onChanged: onProjectChanged,
+                  decoration: const InputDecoration(
+                    labelText: 'Proyecto',
+                    prefixIcon: Icon(Icons.assignment_outlined, size: 20),
+                  ),
                 ),
-              ),
+              ],
               const SizedBox(height: 18),
               FilledButton.icon(
                 onPressed: saving ? null : onSubmit,

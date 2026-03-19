@@ -173,15 +173,7 @@ class _ProjectsTabState extends State<ProjectsTab> {
                                         fontSize: 20,
                                       ),
                                     ),
-                                    SizedBox(height: 4),
-                                    Text(
-                                      'Crea proyectos desde el celular con el mismo flujo del panel web.',
-                                      style: TextStyle(
-                                        color: AppColors.ink700,
-                                        fontSize: 13,
-                                        height: 1.3,
-                                      ),
-                                    ),
+
                                   ],
                                 ),
                               ),

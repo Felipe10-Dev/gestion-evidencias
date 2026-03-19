@@ -304,12 +304,11 @@ class ApiService {
     required String token,
     required String id,
     required String nombre,
-    required String projectId,
   }) async {
     final response = await _put(
       _uri('/teams/$id'),
       headers: _headers(token),
-      body: jsonEncode({'nombre': nombre, 'projectId': projectId}),
+      body: jsonEncode({'nombre': nombre}),
     );
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
