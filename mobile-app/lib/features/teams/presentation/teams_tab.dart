@@ -109,7 +109,7 @@ class _TeamsTabState extends State<TeamsTab> {
             }
 
             return _buildSheetScaffold(
-              icon: Icons.ac_unit,
+              icon: Icons.add_circle_outline_rounded,
               title: 'Nuevo equipo',
               projectId: sheetProjectId,
               onProjectChanged: (v) => setSS(() => sheetProjectId = v),
@@ -325,7 +325,7 @@ class _TeamsTabState extends State<TeamsTab> {
                 textInputAction: TextInputAction.done,
                 decoration: const InputDecoration(
                   labelText: 'Nombre del equipo',
-                  prefixIcon: Icon(Icons.ac_unit, size: 20),
+                  prefixIcon: Icon(Icons.hvac_outlined, size: 20),
                 ),
               ),
               if (onProjectChanged != null) ...[  
@@ -417,7 +417,7 @@ class _TeamsTabState extends State<TeamsTab> {
                     ],
                   ),
                   child: const Icon(
-                    Icons.ac_unit,
+                    Icons.add_circle_outline_rounded,
                     color: Colors.white,
                     size: 22,
                   ),
@@ -519,7 +519,7 @@ class _TeamsTabState extends State<TeamsTab> {
             borderRadius: BorderRadius.circular(12),
           ),
           child: const Icon(
-            Icons.ac_unit,
+            Icons.hvac_outlined,
             color: AppColors.brandBlue,
             size: 22,
           ),
@@ -680,7 +680,7 @@ class _TeamsTabState extends State<TeamsTab> {
               child: Column(
                 children: [
                   Icon(
-                    Icons.ac_unit,
+                    Icons.hvac_outlined,
                     size: 56,
                     color: AppColors.brandBlue.withValues(alpha: 0.35),
                   ),
