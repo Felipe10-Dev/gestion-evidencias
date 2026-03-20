@@ -27,39 +27,6 @@ class _TeamsTabState extends State<TeamsTab> {
 
   bool get _isAdmin => widget.user.isAdmin;
 
-  static const List<_TeamVisual> _teamVisuals = [
-    _TeamVisual(
-      icon: Icons.kitchen_rounded,
-      accent: AppColors.brandBlue,
-      background: Color(0xFFEFF4FF),
-    ),
-    _TeamVisual(
-      icon: Icons.ac_unit_rounded,
-      accent: Color(0xFF0F8A5F),
-      background: Color(0xFFEAFBF6),
-    ),
-    _TeamVisual(
-      icon: Icons.device_thermostat_rounded,
-      accent: Color(0xFFB76E00),
-      background: Color(0xFFFFF4E6),
-    ),
-    _TeamVisual(
-      icon: Icons.settings_input_component_rounded,
-      accent: Color(0xFF6D47C8),
-      background: Color(0xFFF3EEFF),
-    ),
-    _TeamVisual(
-      icon: Icons.tune_rounded,
-      accent: Color(0xFF0E7490),
-      background: Color(0xFFE9FAFF),
-    ),
-    _TeamVisual(
-      icon: Icons.precision_manufacturing_rounded,
-      accent: Color(0xFF9A3412),
-      background: Color(0xFFFFEFE8),
-    ),
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -537,8 +504,6 @@ class _TeamsTabState extends State<TeamsTab> {
   }
 
   Widget _buildTeamCard(TeamModel team) {
-    final visual = _buildTeamVisual(team.nombre);
-
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -552,119 +517,97 @@ class _TeamsTabState extends State<TeamsTab> {
           ),
         ],
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 10,
-        ),
-        leading: Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: AppColors.ink900.withValues(alpha: 0.06),
-            ),
-          ),
-          child: Center(
-            child: Container(
-              width: 36,
-              height: 36,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+        child: Row(
+          children: [
+            Container(
+              width: 6,
+              height: 34,
               decoration: BoxDecoration(
-                color: visual.background,
-                borderRadius: BorderRadius.circular(11),
-              ),
-              child: Icon(
-                visual.icon,
-                color: visual.accent,
-                size: 19,
-              ),
-            ),
-          ),
-        ),
-        title: Text(
-          team.nombre,
-          style: const TextStyle(
-            fontWeight: FontWeight.w700,
-            fontSize: 15,
-            color: AppColors.ink900,
-          ),
-        ),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Text(
-            'Equipo operativo',
-            style: TextStyle(
-              color: AppColors.ink700.withValues(alpha: 0.78),
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-        trailing: _isAdmin
-            ? PopupMenuButton<String>(
-                icon: const Icon(
-                  Icons.more_vert,
-                  color: AppColors.ink300,
-                  size: 22,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                onSelected: (value) {
-                  if (value == 'edit') _showEditTeamSheet(team);
-                  if (value == 'delete') _showDeleteConfirm(team);
-                },
-                itemBuilder: (_) => [
-                  const PopupMenuItem(
-                    value: 'edit',
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.edit_outlined,
-                          color: AppColors.brandBlue,
-                          size: 18,
-                        ),
-                        SizedBox(width: 10),
-                        Text('Editar'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'delete',
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.delete_outline,
-                          color: AppColors.danger,
-                          size: 18,
-                        ),
-                        SizedBox(width: 10),
-                        Text(
-                          'Eliminar',
-                          style: TextStyle(color: AppColors.danger),
-                        ),
-                      ],
-                    ),
+                color: AppColors.brandBlue.withValues(alpha: 0.9),
+                borderRadius: BorderRadius.circular(999),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.brandBlue.withValues(alpha: 0.12),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
                 ],
-              )
-            : const Icon(
-                Icons.chevron_right,
-                color: AppColors.ink300,
-                size: 20,
               ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                team.nombre,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                  color: AppColors.ink900,
+                  letterSpacing: -0.2,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 10),
+            _isAdmin
+                ? PopupMenuButton<String>(
+                    icon: const Icon(
+                      Icons.more_vert,
+                      color: AppColors.ink300,
+                      size: 22,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    onSelected: (value) {
+                      if (value == 'edit') _showEditTeamSheet(team);
+                      if (value == 'delete') _showDeleteConfirm(team);
+                    },
+                    itemBuilder: (_) => [
+                      const PopupMenuItem(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.edit_outlined,
+                              color: AppColors.brandBlue,
+                              size: 18,
+                            ),
+                            SizedBox(width: 10),
+                            Text('Editar'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.delete_outline,
+                              color: AppColors.danger,
+                              size: 18,
+                            ),
+                            SizedBox(width: 10),
+                            Text(
+                              'Eliminar',
+                              style: TextStyle(color: AppColors.danger),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  )
+                : const Icon(
+                    Icons.chevron_right,
+                    color: AppColors.ink300,
+                    size: 20,
+                ),
+          ],
+        ),
       ),
     );
-  }
-
-  _TeamVisual _buildTeamVisual(String name) {
-    final paletteIndex = name.trim().isEmpty
-        ? 0
-        : name.trim().codeUnits.fold<int>(0, (sum, char) => sum + char) %
-              _teamVisuals.length;
-    return _teamVisuals[paletteIndex];
   }
 
   // ── Grouped sections ──────────────────────────────────────────────────────────
@@ -802,16 +745,4 @@ class _TeamsTabState extends State<TeamsTab> {
       ),
     );
   }
-}
-
-class _TeamVisual {
-  const _TeamVisual({
-    required this.icon,
-    required this.accent,
-    required this.background,
-  });
-
-  final IconData icon;
-  final Color accent;
-  final Color background;
 }
