@@ -137,19 +137,31 @@ class _UploadEvidenceTabState extends State<UploadEvidenceTab>
   }
 
   Future<bool> _syncDataBeforeUpload() async {
-    final previousTeamId = _teamId;
-    await _loadData(showLoader: false);
-    if (!mounted) return false;
-
-    if (previousTeamId != null && previousTeamId != _teamId) {
-      showAppSnackBar(
-        context,
-        'El equipo seleccionado ya no existe. Selecciona otro equipo antes de subir.',
-      );
+    final selectedTeamId = _teamId;
+    if (selectedTeamId == null || selectedTeamId.isEmpty) {
       return false;
     }
 
-    return _teamId != null && _teamId!.isNotEmpty;
+    try {
+      final latestTeams = await ApiService.getTeams(widget.token);
+      if (!mounted) return false;
+
+      final teamStillExists = latestTeams.any((team) => team.id == selectedTeamId);
+      if (!teamStillExists) {
+        showAppSnackBar(
+          context,
+          'El equipo seleccionado ya no existe. Selecciona otro equipo antes de subir.',
+        );
+        await _loadData(showLoader: false);
+        return false;
+      }
+
+      setState(() => _teams = latestTeams);
+      return true;
+    } catch (_) {
+      // If sync check fails by network issues, keep current selection and let upload attempt handle API error.
+      return true;
+    }
   }
 
   Future<void> _loadReferencesForSelectedTeam() async {
