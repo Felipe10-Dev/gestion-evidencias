@@ -50,6 +50,25 @@ Nota: este paso es obligatorio si un secreto estuvo en commits antiguos.
 - .gitignore actualizado
 - Pruebas basicas pasan
 
+## 5.1) Si despliegas directo desde GitHub
+
+Esto NO cambia las reglas de seguridad:
+
+- El repo sigue sin `.env` ni llaves
+- Configuras secretos en Railway/Render/Vercel/Azure/GitHub Actions
+- El entorno de despliegue inyecta variables en runtime
+
+Desplegar desde repo y proteger secretos son compatibles.
+
+## 5.2) Archivos grandes o ruidosos que SI son necesarios
+
+No eliminar por error archivos de configuracion nativa como:
+
+- `mobile-app/ios/Runner.xcodeproj/project.pbxproj`
+- `mobile-app/android/**/*.gradle*`
+
+No son credenciales. Son metadatos de build para iOS/Android.
+
 ## 6) Variables de entorno recomendadas
 
 Backend (ejemplo):

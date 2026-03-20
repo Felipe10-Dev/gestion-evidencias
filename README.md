@@ -80,6 +80,25 @@ Antes de hacer publico el repositorio:
 
 Guia recomendada: docs/guia-publicacion-segura-es.md
 
+## Despliegue desde repositorio sin subir .env
+
+Si despliegas directo desde GitHub (Railway, Render, Vercel, Azure, etc.), es normal NO subir `.env`.
+
+Flujo recomendado:
+
+1. El codigo vive en GitHub sin secretos
+2. Las variables sensibles se configuran en el panel del proveedor (Secrets/Environment Variables)
+3. En runtime, el proveedor inyecta esas variables al proceso
+
+En resumen: si, puedes desplegar desde el repo y mantener secretos fuera del repo al mismo tiempo.
+
+## Archivos que parecen basura pero no se deben borrar
+
+En `mobile-app`, archivos como `ios/Runner.xcodeproj/project.pbxproj` son necesarios para compilar iOS.
+No son credenciales ni basura: son parte del proyecto nativo generado por Flutter/Xcode.
+
+Solo deberias removerlos si decides dejar de soportar por completo esa plataforma (por ejemplo, eliminar iOS del proyecto).
+
 ## Estado de limpieza de repo
 
 Se eliminaron artefactos regenerables y contenido sensible identificado durante auditoria inicial:
