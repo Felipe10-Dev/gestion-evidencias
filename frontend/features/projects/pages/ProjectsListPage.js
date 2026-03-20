@@ -10,6 +10,7 @@ import { useToast } from '@/context/toast/ToastContext'
 import { ProjectCard } from '@/features/projects/components/ProjectCard'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { useAuth } from '@/context/auth/AuthContext'
+import { notifyDataChanged } from '@/lib/appDataEvents'
 import { projectsService } from '@/services/api/projects.service'
 
 function normalizeProjectsResponse(payload) {
@@ -92,6 +93,7 @@ export function ProjectsListPage() {
     try {
       await projectsService.create(formValues.nombre, formValues.descripcion)
       await refreshProjects()
+      notifyDataChanged('projects')
       setIsCreateModalOpen(false)
       showToast({
         title: 'Proyecto creado con éxito',
@@ -124,6 +126,7 @@ export function ProjectsListPage() {
     try {
       await projectsService.update(projectBeingEdited.id, editFormValues.nombre, editFormValues.descripcion)
       await refreshProjects()
+      notifyDataChanged('projects')
 
       showToast({
         title: 'Proyecto actualizado',
@@ -160,6 +163,7 @@ export function ProjectsListPage() {
     try {
       await projectsService.remove(projectPendingDelete.id)
       setProjects((currentProjects) => currentProjects.filter(({ id }) => id !== projectPendingDelete.id))
+      notifyDataChanged('projects')
       showToast({
         title: 'Proyecto eliminado',
         description: `${projectPendingDelete.nombre} se eliminó correctamente.`,

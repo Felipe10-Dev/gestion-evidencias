@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/app_data_refresh_bus.dart';
 import '../../../core/utils/app_snackbar.dart';
 import '../../../core/widgets/section_card.dart';
 import '../../../core/widgets/stage_chip.dart';
@@ -21,7 +22,8 @@ class UploadEvidenceTab extends StatefulWidget {
   State<UploadEvidenceTab> createState() => _UploadEvidenceTabState();
 }
 
-class _UploadEvidenceTabState extends State<UploadEvidenceTab> {
+class _UploadEvidenceTabState extends State<UploadEvidenceTab>
+  with WidgetsBindingObserver {
   final _newReferenceCtrl = TextEditingController();
   final _picker = ImagePicker();
 
@@ -40,35 +42,57 @@ class _UploadEvidenceTabState extends State<UploadEvidenceTab> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    AppDataRefreshBus.revision.addListener(_handleDataRefreshSignal);
     _loadData();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    AppDataRefreshBus.revision.removeListener(_handleDataRefreshSignal);
     _newReferenceCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _loadData() async {
-    setState(() => _loading = true);
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadData(showLoader: false);
+    }
+  }
+
+  void _handleDataRefreshSignal() {
+    if (!mounted) return;
+    _loadData(showLoader: false);
+  }
+
+  Future<void> _loadData({bool showLoader = true}) async {
+    if (showLoader && mounted) {
+      setState(() => _loading = true);
+    }
+
     try {
+      final previousProjectId = _projectId;
+      final previousTeamId = _teamId;
+
       final projects = await ApiService.getProjects(widget.token);
       final teams = await ApiService.getTeams(widget.token);
       if (!mounted) return;
 
-      final firstProjectId = projects.isNotEmpty ? projects.first.id : null;
-      final defaultTeamId = firstProjectId == null
-          ? null
+      final nextProjectId = _resolveProjectSelection(projects, previousProjectId);
+      final nextTeams = nextProjectId == null
+          ? const <TeamModel>[]
           : teams
-                .where((team) => team.projectId == firstProjectId)
-                .firstOrNull
-                ?.id;
+                .where((team) => team.projectId == nextProjectId)
+                .toList(growable: false);
+      final nextTeamId = _resolveTeamSelection(nextTeams, previousTeamId);
 
       setState(() {
         _projects = projects;
         _teams = teams;
-        _projectId = firstProjectId;
-        _teamId = defaultTeamId;
+        _projectId = nextProjectId;
+        _teamId = nextTeamId;
       });
 
       await _loadReferencesForSelectedTeam();
@@ -76,10 +100,56 @@ class _UploadEvidenceTabState extends State<UploadEvidenceTab> {
       if (!mounted) return;
       showAppSnackBar(context, normalizeError(error));
     } finally {
-      if (mounted) {
+      if (showLoader && mounted) {
         setState(() => _loading = false);
       }
     }
+  }
+
+  String? _resolveProjectSelection(
+    List<ProjectModel> projects,
+    String? previousProjectId,
+  ) {
+    if (projects.isEmpty) return null;
+
+    final hasPreviousSelection = previousProjectId != null &&
+        projects.any((project) => project.id == previousProjectId);
+    if (hasPreviousSelection) {
+      return previousProjectId;
+    }
+
+    return projects.first.id;
+  }
+
+  String? _resolveTeamSelection(
+    List<TeamModel> teams,
+    String? previousTeamId,
+  ) {
+    if (teams.isEmpty) return null;
+
+    final hasPreviousSelection = previousTeamId != null &&
+        teams.any((team) => team.id == previousTeamId);
+    if (hasPreviousSelection) {
+      return previousTeamId;
+    }
+
+    return teams.first.id;
+  }
+
+  Future<bool> _syncDataBeforeUpload() async {
+    final previousTeamId = _teamId;
+    await _loadData(showLoader: false);
+    if (!mounted) return false;
+
+    if (previousTeamId != null && previousTeamId != _teamId) {
+      showAppSnackBar(
+        context,
+        'El equipo seleccionado ya no existe. Selecciona otro equipo antes de subir.',
+      );
+      return false;
+    }
+
+    return _teamId != null && _teamId!.isNotEmpty;
   }
 
   Future<void> _loadReferencesForSelectedTeam() async {
@@ -151,6 +221,11 @@ class _UploadEvidenceTabState extends State<UploadEvidenceTab> {
   }
 
   Future<void> _upload() async {
+    final selectionIsCurrent = await _syncDataBeforeUpload();
+    if (!selectionIsCurrent) {
+      return;
+    }
+
     if (_projectId == null ||
         _projectId!.isEmpty ||
         _teamId == null ||
@@ -192,6 +267,7 @@ class _UploadEvidenceTabState extends State<UploadEvidenceTab> {
         _selectedImage = null;
       });
       await _loadReferencesForSelectedTeam();
+      AppDataRefreshBus.notifyChanged();
       if (!mounted) return;
       showAppSnackBar(context, 'Evidencia subida correctamente');
     } catch (error) {

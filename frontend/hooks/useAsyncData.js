@@ -4,6 +4,11 @@ export function useAsyncData(asyncFn, dependencies = [], initialValue = null) {
   const [data, setData] = useState(initialValue)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [reloadToken, setReloadToken] = useState(0)
+
+  const refetch = () => {
+    setReloadToken((current) => current + 1)
+  }
 
   useEffect(() => {
     let isMounted = true
@@ -33,7 +38,7 @@ export function useAsyncData(asyncFn, dependencies = [], initialValue = null) {
     return () => {
       isMounted = false
     }
-  }, dependencies)
+  }, [...dependencies, reloadToken])
 
-  return { data, error, isLoading, setData }
+  return { data, error, isLoading, setData, refetch }
 }

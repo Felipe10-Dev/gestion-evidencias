@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/app_data_refresh_bus.dart';
 import '../../../core/utils/app_snackbar.dart';
 import '../../../data/models/project_model.dart';
 import '../../../data/models/session_user.dart';
@@ -27,14 +28,21 @@ class _ProjectsTabState extends State<ProjectsTab> {
   @override
   void initState() {
     super.initState();
+    AppDataRefreshBus.revision.addListener(_handleExternalRefresh);
     _fetch();
   }
 
   @override
   void dispose() {
+    AppDataRefreshBus.revision.removeListener(_handleExternalRefresh);
     _nameCtrl.dispose();
     _descriptionCtrl.dispose();
     super.dispose();
+  }
+
+  void _handleExternalRefresh() {
+    if (!mounted || _loading) return;
+    _fetch();
   }
 
   Future<void> _fetch() async {
@@ -73,6 +81,7 @@ class _ProjectsTabState extends State<ProjectsTab> {
       if (!mounted) return;
       Navigator.of(context).pop();
       await _fetch();
+      AppDataRefreshBus.notifyChanged();
       if (!mounted) return;
       showAppSnackBar(context, 'Proyecto creado');
     } catch (error) {
@@ -343,6 +352,7 @@ class _ProjectsTabState extends State<ProjectsTab> {
                   if (!context.mounted) return;
                   Navigator.of(context).pop();
                   await _fetch();
+                  AppDataRefreshBus.notifyChanged();
                   if (!context.mounted) return;
                   showAppSnackBar(context, 'Proyecto actualizado');
                 } catch (error) {
@@ -533,6 +543,7 @@ class _ProjectsTabState extends State<ProjectsTab> {
       await ApiService.deleteProject(token: widget.token, id: project.id);
       if (!mounted) return;
       await _fetch();
+      AppDataRefreshBus.notifyChanged();
       if (!mounted) return;
       showAppSnackBar(context, 'Proyecto eliminado');
     } catch (error) {

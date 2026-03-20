@@ -11,6 +11,7 @@ import { TeamsTable } from '@/features/projects/components/TeamsTable'
 import { useToast } from '@/context/toast/ToastContext'
 import { useAuth } from '@/context/auth/AuthContext'
 import { useAsyncData } from '@/hooks/useAsyncData'
+import { notifyDataChanged } from '@/lib/appDataEvents'
 import { projectsService } from '@/services/api/projects.service'
 import { teamsService } from '@/services/api/teams.service'
 
@@ -94,6 +95,7 @@ export function ProjectDetailPage({ projectId }) {
         ...prev,
         teams: Array.isArray(teamsResponse.data) ? teamsResponse.data : [],
       }))
+      notifyDataChanged('teams')
 
       showToast({
         title: 'Equipo eliminado',
@@ -149,6 +151,7 @@ export function ProjectDetailPage({ projectId }) {
         ...prev,
         teams: Array.isArray(teamsResponse.data) ? teamsResponse.data : [],
       }))
+      notifyDataChanged('teams')
 
       setIsCreateModalOpen(false)
       showToast({
@@ -188,6 +191,7 @@ export function ProjectDetailPage({ projectId }) {
           team.id === teamBeingEdited.id ? { ...team, nombre: nextTeamName } : team
         )),
       }))
+      notifyDataChanged('teams')
 
       showToast({
         title: 'Equipo actualizado',

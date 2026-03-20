@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/app_data_refresh_bus.dart';
 import '../../../core/utils/app_snackbar.dart';
 import '../../../data/models/project_model.dart';
 import '../../../data/models/session_user.dart';
@@ -26,16 +27,30 @@ class _TeamsTabState extends State<TeamsTab> {
 
   bool get _isAdmin => widget.user.isAdmin;
 
+  static const List<(Color, Color)> _teamBadgePalette = [
+    (Color(0xFFEAF2FF), AppColors.brandBlue),
+    (Color(0xFFEAFBF6), Color(0xFF0F8A5F)),
+    (Color(0xFFFFF4E6), Color(0xFFB76E00)),
+    (Color(0xFFF2ECFF), Color(0xFF6D47C8)),
+  ];
+
   @override
   void initState() {
     super.initState();
+    AppDataRefreshBus.revision.addListener(_handleExternalRefresh);
     _fetchAll();
   }
 
   @override
   void dispose() {
+    AppDataRefreshBus.revision.removeListener(_handleExternalRefresh);
     _nameCtrl.dispose();
     super.dispose();
+  }
+
+  void _handleExternalRefresh() {
+    if (!mounted || _loading) return;
+    _fetchAll();
   }
 
   // ── Data ────────────────────────────────────────────────────────────────────
@@ -99,6 +114,7 @@ class _TeamsTabState extends State<TeamsTab> {
                 if (!ctx.mounted) return;
                 Navigator.of(ctx).pop();
                 await _fetchAll();
+                AppDataRefreshBus.notifyChanged();
                 if (!ctx.mounted) return;
                 showAppSnackBar(ctx, 'Equipo creado');
               } catch (error) {
@@ -156,6 +172,7 @@ class _TeamsTabState extends State<TeamsTab> {
                 if (!ctx.mounted) return;
                 Navigator.of(ctx).pop();
                 await _fetchAll();
+                AppDataRefreshBus.notifyChanged();
                 if (!ctx.mounted) return;
                 showAppSnackBar(ctx, 'Equipo actualizado');
               } catch (error) {
@@ -254,6 +271,7 @@ class _TeamsTabState extends State<TeamsTab> {
       await ApiService.deleteTeam(token: widget.token, id: team.id);
       if (!mounted) return;
       await _fetchAll();
+      AppDataRefreshBus.notifyChanged();
       if (!mounted) return;
       showAppSnackBar(context, 'Equipo eliminado');
     } catch (error) {
@@ -493,6 +511,8 @@ class _TeamsTabState extends State<TeamsTab> {
   }
 
   Widget _buildTeamCard(TeamModel team) {
+    final badge = _buildTeamBadge(team.nombre);
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -512,16 +532,21 @@ class _TeamsTabState extends State<TeamsTab> {
           vertical: 10,
         ),
         leading: Container(
-          width: 42,
-          height: 42,
+          width: 46,
+          height: 46,
           decoration: BoxDecoration(
-            color: AppColors.brandBlue.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
+            color: badge.$1,
+            borderRadius: BorderRadius.circular(14),
           ),
-          child: const Icon(
-            Icons.hvac_outlined,
-            color: AppColors.brandBlue,
-            size: 22,
+          alignment: Alignment.center,
+          child: Text(
+            _teamInitials(team.nombre),
+            style: TextStyle(
+              color: badge.$2,
+              fontWeight: FontWeight.w800,
+              fontSize: 15,
+              letterSpacing: 0.2,
+            ),
           ),
         ),
         title: Text(
@@ -587,6 +612,32 @@ class _TeamsTabState extends State<TeamsTab> {
               ),
       ),
     );
+  }
+
+  (Color, Color) _buildTeamBadge(String name) {
+    final paletteIndex = name.trim().isEmpty
+        ? 0
+        : name.trim().codeUnits.fold<int>(0, (sum, char) => sum + char) %
+              _teamBadgePalette.length;
+    return _teamBadgePalette[paletteIndex];
+  }
+
+  String _teamInitials(String value) {
+    final parts = value
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .toList(growable: false);
+
+    if (parts.isEmpty) {
+      return 'EQ';
+    }
+
+    if (parts.length == 1) {
+      return parts.first.substring(0, parts.first.length >= 2 ? 2 : 1).toUpperCase();
+    }
+
+    return '${parts.first[0]}${parts[1][0]}'.toUpperCase();
   }
 
   // ── Grouped sections ──────────────────────────────────────────────────────────

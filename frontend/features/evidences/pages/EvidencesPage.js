@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { EmptyState } from '@/components/ui/EmptyState'
 import { FeedbackMessage } from '@/components/ui/FeedbackMessage'
@@ -7,6 +7,7 @@ import { LoadingState } from '@/components/ui/LoadingState'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { useToast } from '@/context/toast/ToastContext'
 import { useAsyncData } from '@/hooks/useAsyncData'
+import { subscribeToDataChanges } from '@/lib/appDataEvents'
 import { evidencesService } from '@/services/api/evidences.service'
 
 function FolderIcon({ className = 'h-4 w-4' }) {
@@ -162,10 +163,36 @@ export function EvidencesPage() {
   const [collapsedProjects, setCollapsedProjects] = useState({})
   const [collapsedTeams, setCollapsedTeams] = useState({})
 
-  const { data: driveTree, isLoading, setData: setDriveTree } = useAsyncData(async () => {
+  const { data: driveTree, isLoading, setData: setDriveTree, refetch } = useAsyncData(async () => {
     const response = await evidencesService.getDriveTree()
     return response.data
   }, [], { rootFolderId: null, projects: [] })
+
+  useEffect(() => {
+    const refreshTree = () => {
+      refetch()
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshTree()
+      }
+    }
+
+    window.addEventListener('focus', refreshTree)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    const unsubscribe = subscribeToDataChanges(({ scope }) => {
+      if (scope === 'all' || scope === 'projects' || scope === 'teams') {
+        refreshTree()
+      }
+    })
+
+    return () => {
+      window.removeEventListener('focus', refreshTree)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      unsubscribe()
+    }
+  }, [])
 
   const handleRequestDelete = (payload) => {
     setPendingDelete(payload)
