@@ -682,7 +682,7 @@ class _TeamsTabState extends State<TeamsTab> {
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(
-                      '$teams.length',
+                      '${teams.length}',
                       style: const TextStyle(
                         color: AppColors.brandBlue,
                         fontWeight: FontWeight.w700,
