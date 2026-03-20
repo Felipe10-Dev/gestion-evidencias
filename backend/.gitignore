@@ -1,3 +1,6 @@
 node_modules/
 .env
 google-service-account.json
+autenticacion-*.json
+*-service-account*.json
+*.service-account.json
