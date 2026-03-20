@@ -467,38 +467,57 @@ class _TeamsTabState extends State<TeamsTab> {
 
   Widget _buildTeamsHeader() {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          const Expanded(
-            child: Text(
-              'EQUIPOS',
-              style: TextStyle(
-                color: AppColors.ink300,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.8,
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.ink900.withValues(alpha: 0.05)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'EQUIPOS',
+                    style: TextStyle(
+                      color: AppColors.ink300,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.8,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    '${_projects.length} proyectos activos',
+                    style: const TextStyle(
+                      color: AppColors.ink700,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(
-                color: AppColors.ink900.withValues(alpha: 0.08),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.brandBlue.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                '${_teams.length}',
+                style: const TextStyle(
+                  color: AppColors.brandBlue,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
-            child: Text(
-              '${_teams.length}',
-              style: const TextStyle(
-                color: AppColors.ink900,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -507,50 +526,43 @@ class _TeamsTabState extends State<TeamsTab> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.ink900.withValues(alpha: 0.06)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.ink900.withValues(alpha: 0.035),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
+            color: AppColors.ink900.withValues(alpha: 0.02),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
         child: Row(
           children: [
             Container(
-              width: 6,
-              height: 34,
+              width: 8,
+              height: 8,
               decoration: BoxDecoration(
                 color: AppColors.brandBlue.withValues(alpha: 0.9),
-                borderRadius: BorderRadius.circular(999),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.brandBlue.withValues(alpha: 0.12),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+                shape: BoxShape.circle,
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
             Expanded(
               child: Text(
                 team.nombre,
                 style: const TextStyle(
                   fontWeight: FontWeight.w700,
-                  fontSize: 16,
+                  fontSize: 15,
                   color: AppColors.ink900,
-                  letterSpacing: -0.2,
+                  letterSpacing: -0.1,
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 6),
             _isAdmin
                 ? PopupMenuButton<String>(
                     icon: const Icon(
@@ -612,69 +624,87 @@ class _TeamsTabState extends State<TeamsTab> {
 
   // ── Grouped sections ──────────────────────────────────────────────────────────
 
-  Widget _buildProjectSectionHeader(ProjectModel project, int teamCount) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        children: [
-          Container(
-            width: 4,
-            height: 22,
-            decoration: BoxDecoration(
-              color: AppColors.brandBlue,
-              borderRadius: BorderRadius.circular(4),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              project.nombre,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: AppColors.ink900,
-                fontWeight: FontWeight.w700,
-                fontSize: 15,
-              ),
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: AppColors.brandBlue.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Text(
-              '$teamCount ${teamCount == 1 ? 'equipo' : 'equipos'}',
-              style: const TextStyle(
-                color: AppColors.brandBlue,
-                fontWeight: FontWeight.w700,
-                fontSize: 11,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   List<Widget> _buildGroupedSections() {
     final Map<String, List<TeamModel>> grouped = {};
     for (final team in _teams) {
       grouped.putIfAbsent(team.projectId, () => []).add(team);
     }
+
     final sections = <Widget>[];
+
     for (final project in _projects) {
       final teams = grouped[project.id];
       if (teams == null || teams.isEmpty) continue;
-      sections.add(_buildProjectSectionHeader(project, teams.length));
-      for (final team in teams) {
-        sections.add(Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: _buildTeamCard(team),
-        ));
-      }
-      sections.add(const SizedBox(height: 8));
+
+      sections.add(
+        Container(
+          margin: const EdgeInsets.only(bottom: 14),
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: AppColors.ink900.withValues(alpha: 0.06),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 3,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: AppColors.brandBlue,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      project.nombre,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.ink900,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.brandBlue.withValues(alpha: 0.09),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      '$teams.length',
+                      style: const TextStyle(
+                        color: AppColors.brandBlue,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              ...teams.map(
+                (team) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: _buildTeamCard(team),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
     }
+
     return sections;
   }
 
@@ -696,16 +726,32 @@ class _TeamsTabState extends State<TeamsTab> {
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
           children: [
             _buildCreateCallToAction(),
-            const SizedBox(height: 64),
-            Center(
+            const SizedBox(height: 36),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 26),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: AppColors.ink900.withValues(alpha: 0.06),
+                ),
+              ),
               child: Column(
                 children: [
-                  Icon(
-                    Icons.hvac_outlined,
-                    size: 56,
-                    color: AppColors.brandBlue.withValues(alpha: 0.35),
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: AppColors.brandBlue.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Icon(
+                      Icons.kitchen_outlined,
+                      size: 28,
+                      color: AppColors.brandBlue,
+                    ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   const Text(
                     'Sin equipos aún',
                     style: TextStyle(
@@ -714,11 +760,12 @@ class _TeamsTabState extends State<TeamsTab> {
                       fontSize: 16,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   Text(
                     _isAdmin
-                        ? 'Puedes crearlos desde esta app.'
-                        : 'Espera a que un administrador cree el primero.',
+                        ? 'Crea el primer equipo para organizar las evidencias.'
+                        : 'Aún no hay equipos asignados para mostrar.',
+                    textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: AppColors.ink700,
                       fontSize: 13,
