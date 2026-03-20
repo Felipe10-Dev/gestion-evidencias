@@ -27,11 +27,37 @@ class _TeamsTabState extends State<TeamsTab> {
 
   bool get _isAdmin => widget.user.isAdmin;
 
-  static const List<(Color, Color)> _teamBadgePalette = [
-    (Color(0xFFEAF2FF), AppColors.brandBlue),
-    (Color(0xFFEAFBF6), Color(0xFF0F8A5F)),
-    (Color(0xFFFFF4E6), Color(0xFFB76E00)),
-    (Color(0xFFF2ECFF), Color(0xFF6D47C8)),
+  static const List<_TeamVisual> _teamVisuals = [
+    _TeamVisual(
+      icon: Icons.kitchen_rounded,
+      accent: AppColors.brandBlue,
+      background: Color(0xFFEFF4FF),
+    ),
+    _TeamVisual(
+      icon: Icons.ac_unit_rounded,
+      accent: Color(0xFF0F8A5F),
+      background: Color(0xFFEAFBF6),
+    ),
+    _TeamVisual(
+      icon: Icons.device_thermostat_rounded,
+      accent: Color(0xFFB76E00),
+      background: Color(0xFFFFF4E6),
+    ),
+    _TeamVisual(
+      icon: Icons.settings_input_component_rounded,
+      accent: Color(0xFF6D47C8),
+      background: Color(0xFFF3EEFF),
+    ),
+    _TeamVisual(
+      icon: Icons.tune_rounded,
+      accent: Color(0xFF0E7490),
+      background: Color(0xFFE9FAFF),
+    ),
+    _TeamVisual(
+      icon: Icons.precision_manufacturing_rounded,
+      accent: Color(0xFF9A3412),
+      background: Color(0xFFFFEFE8),
+    ),
   ];
 
   @override
@@ -511,18 +537,18 @@ class _TeamsTabState extends State<TeamsTab> {
   }
 
   Widget _buildTeamCard(TeamModel team) {
-    final badge = _buildTeamBadge(team.nombre);
+    final visual = _buildTeamVisual(team.nombre);
 
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.ink900.withValues(alpha: 0.07)),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.ink900.withValues(alpha: 0.06)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.ink900.withValues(alpha: 0.04),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
+            color: AppColors.ink900.withValues(alpha: 0.035),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -532,20 +558,28 @@ class _TeamsTabState extends State<TeamsTab> {
           vertical: 10,
         ),
         leading: Container(
-          width: 46,
-          height: 46,
+          width: 48,
+          height: 48,
           decoration: BoxDecoration(
-            color: badge.$1,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: AppColors.ink900.withValues(alpha: 0.06),
+            ),
           ),
-          alignment: Alignment.center,
-          child: Text(
-            _teamInitials(team.nombre),
-            style: TextStyle(
-              color: badge.$2,
-              fontWeight: FontWeight.w800,
-              fontSize: 15,
-              letterSpacing: 0.2,
+          child: Center(
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: visual.background,
+                borderRadius: BorderRadius.circular(11),
+              ),
+              child: Icon(
+                visual.icon,
+                color: visual.accent,
+                size: 19,
+              ),
             ),
           ),
         ),
@@ -555,6 +589,17 @@ class _TeamsTabState extends State<TeamsTab> {
             fontWeight: FontWeight.w700,
             fontSize: 15,
             color: AppColors.ink900,
+          ),
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Text(
+            'Equipo operativo',
+            style: TextStyle(
+              color: AppColors.ink700.withValues(alpha: 0.78),
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
         trailing: _isAdmin
@@ -614,30 +659,12 @@ class _TeamsTabState extends State<TeamsTab> {
     );
   }
 
-  (Color, Color) _buildTeamBadge(String name) {
+  _TeamVisual _buildTeamVisual(String name) {
     final paletteIndex = name.trim().isEmpty
         ? 0
         : name.trim().codeUnits.fold<int>(0, (sum, char) => sum + char) %
-              _teamBadgePalette.length;
-    return _teamBadgePalette[paletteIndex];
-  }
-
-  String _teamInitials(String value) {
-    final parts = value
-        .trim()
-        .split(RegExp(r'\s+'))
-        .where((part) => part.isNotEmpty)
-        .toList(growable: false);
-
-    if (parts.isEmpty) {
-      return 'EQ';
-    }
-
-    if (parts.length == 1) {
-      return parts.first.substring(0, parts.first.length >= 2 ? 2 : 1).toUpperCase();
-    }
-
-    return '${parts.first[0]}${parts[1][0]}'.toUpperCase();
+              _teamVisuals.length;
+    return _teamVisuals[paletteIndex];
   }
 
   // ── Grouped sections ──────────────────────────────────────────────────────────
@@ -775,4 +802,16 @@ class _TeamsTabState extends State<TeamsTab> {
       ),
     );
   }
+}
+
+class _TeamVisual {
+  const _TeamVisual({
+    required this.icon,
+    required this.accent,
+    required this.background,
+  });
+
+  final IconData icon;
+  final Color accent;
+  final Color background;
 }
