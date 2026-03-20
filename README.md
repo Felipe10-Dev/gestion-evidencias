@@ -1,127 +1,124 @@
 # Gestion de Evidencias
 
-Aplicacion full stack para gestionar proyectos, equipos y evidencias con tres clientes:
+Plataforma para registrar, organizar y consultar evidencias tecnicas por proyecto y por equipo.
 
-- Backend API en Node.js y Express
-- Frontend web en Next.js
-- App movil en Flutter
+El sistema esta pensado para operaciones de campo y seguimiento tecnico, con tres frentes de uso:
 
-## Objetivo
+- API backend para reglas de negocio y datos
+- Aplicacion web para administracion y seguimiento
+- Aplicacion movil para uso operativo de tecnicos
 
-Centralizar la carga y consulta de evidencias por proyecto y equipo, con autenticacion y control de acceso por roles.
+## Proposito del proyecto
+
+Resolver el control de evidencias en procesos tecnicos donde se necesita:
+
+- Trazabilidad por proyecto, equipo y usuario
+- Carga y consulta rapida de evidencias
+- Roles y permisos para proteger la informacion
+- Flujo centralizado entre web, movil y backend
+
+## Tecnologias
+
+Backend:
+
+- Node.js
+- Express
+- Sequelize
+- PostgreSQL
+
+Frontend web:
+
+- Next.js
+- React
+- Tailwind CSS
+
+Aplicacion movil:
+
+- Flutter (Android, iOS, Web y Desktop)
 
 ## Estructura del repositorio
 
-- backend: API REST, validaciones, autenticacion, acceso a base de datos y servicios de almacenamiento
-- frontend: panel web para administracion y operacion
-- mobile-app: cliente movil Flutter
-- docs: documentacion tecnica del sistema y base de datos
+- backend: API REST, autenticacion, control de acceso, logica de evidencias y servicios
+- frontend: interfaz web para gestion de proyectos, equipos y evidencias
+- mobile-app: cliente movil para operacion en campo
+- docs: documentacion tecnica del sistema
 
-## Tecnologias principales
+## Casos de uso principales
 
-- Node.js, Express, Sequelize, PostgreSQL
-- Next.js, React, Tailwind CSS
-- Flutter (Android, iOS, Web, Desktop)
+- Crear y administrar proyectos
+- Crear y administrar equipos
+- Subir evidencias asociadas a equipos/proyectos
+- Consultar evidencias y estado de avance
+- Gestionar usuarios con control por roles
 
-## Requisitos previos
+## Levantar proyecto en local
 
-- Node.js 18+
-- npm 9+
-- PostgreSQL 14+
-- Flutter SDK (para mobile-app)
+Requisitos:
 
-## Configuracion rapida local
+- Node.js 18 o superior
+- npm 9 o superior
+- PostgreSQL 14 o superior
+- Flutter SDK (solo si ejecutarás mobile-app)
 
-### 1) Backend
+### 1. Backend
 
-1. Copiar backend/.env.example a backend/.env
-2. Completar credenciales locales de base de datos
-3. Configurar credenciales de Google Drive por una de estas rutas:
-	- OAuth2 por variables de entorno
-	- Service Account con archivo local no versionado
+1. Ir a backend
+2. Instalar dependencias
+3. Crear archivo backend/.env desde backend/.env.example
+4. Configurar variables de base de datos y autenticacion
+5. Iniciar servidor
 
 Comandos:
 
-```bash
 cd backend
 npm install
 npm run dev
-```
 
-### 2) Frontend
+El backend queda disponible por defecto en http://localhost:3000
+
+### 2. Frontend web
+
+1. Ir a frontend
+2. Instalar dependencias
+3. Iniciar entorno de desarrollo
 
 Comandos:
 
-```bash
 cd frontend
 npm install
 npm run dev
-```
 
-### 3) App movil
+La app web queda disponible por defecto en http://localhost:3001 o http://localhost:3000 segun el puerto libre.
+
+### 3. Aplicacion movil (opcional)
+
+1. Ir a mobile-app
+2. Instalar dependencias Flutter
+3. Ejecutar en emulador o dispositivo
 
 Comandos:
 
-```bash
 cd mobile-app
 flutter pub get
 flutter run
-```
-
-## Seguridad y publicacion
-
-Antes de hacer publico el repositorio:
-
-- No subir archivos .env
-- No subir archivos JSON de credenciales de Google
-- No subir tokens, secrets, refresh tokens ni llaves privadas en codigo o docs
-- Revisar que backend/.gitignore incluya patrones de credenciales
-- Rotar inmediatamente cualquier llave que haya estado expuesta en historial
-
-Guia recomendada: docs/guia-publicacion-segura-es.md
-
-## Despliegue desde repositorio sin subir .env
-
-Si despliegas directo desde GitHub (Railway, Render, Vercel, Azure, etc.), es normal NO subir `.env`.
-
-Flujo recomendado:
-
-1. El codigo vive en GitHub sin secretos
-2. Las variables sensibles se configuran en el panel del proveedor (Secrets/Environment Variables)
-3. En runtime, el proveedor inyecta esas variables al proceso
-
-En resumen: si, puedes desplegar desde el repo y mantener secretos fuera del repo al mismo tiempo.
-
-## Archivos que parecen basura pero no se deben borrar
-
-En `mobile-app`, archivos como `ios/Runner.xcodeproj/project.pbxproj` son necesarios para compilar iOS.
-No son credenciales ni basura: son parte del proyecto nativo generado por Flutter/Xcode.
-
-Solo deberias removerlos si decides dejar de soportar por completo esa plataforma (por ejemplo, eliminar iOS del proyecto).
-
-## Estado de limpieza de repo
-
-Se eliminaron artefactos regenerables y contenido sensible identificado durante auditoria inicial:
-
-- Directorios de build/cache locales
-- Dependencias instaladas localmente (node_modules)
-- Referencias de secretos reales en documentacion
 
 ## Pruebas
 
 Backend:
 
-```bash
 cd backend
 npm test
-```
 
-## Documentacion adicional
+## Documentacion tecnica
 
 - docs/system-architecture.md
 - docs/database-schema.md
 - docs/project-context.md
 
+## Estado del proyecto
+
+MVP funcional con clientes web y movil conectados a una API central.
+
 ## Licencia
 
-Definir licencia antes de abrir el repositorio al publico (por ejemplo, MIT).
+Pendiente de definicion para publicacion (ejemplo recomendado: MIT).
