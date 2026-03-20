@@ -1,124 +1,145 @@
 # Gestion de Evidencias
 
-Plataforma para registrar, organizar y consultar evidencias tecnicas por proyecto y por equipo.
+Sistema para registrar, organizar y consultar evidencias tecnicas por proyecto y equipo, con uso operativo en campo y administracion centralizada.
 
-El sistema esta pensado para operaciones de campo y seguimiento tecnico, con tres frentes de uso:
+## Que resuelve
 
-- API backend para reglas de negocio y datos
-- Aplicacion web para administracion y seguimiento
-- Aplicacion movil para uso operativo de tecnicos
+Este proyecto permite:
 
-## Proposito del proyecto
+- Mantener trazabilidad de evidencias por proyecto, equipo y usuario
+- Centralizar carga y consulta de evidencias desde web y movil
+- Aplicar autenticacion y control de acceso por roles
+- Conectar operacion tecnica con seguimiento administrativo
 
-Resolver el control de evidencias en procesos tecnicos donde se necesita:
-
-- Trazabilidad por proyecto, equipo y usuario
-- Carga y consulta rapida de evidencias
-- Roles y permisos para proteger la informacion
-- Flujo centralizado entre web, movil y backend
-
-## Tecnologias
+## Stack validado del proyecto
 
 Backend:
 
 - Node.js
-- Express
+- Express 5
 - Sequelize
 - PostgreSQL
+- JWT, Joi, Helmet, Rate Limiting
 
 Frontend web:
 
-- Next.js
-- React
+- Next.js 14
+- React 18
 - Tailwind CSS
+- Axios
 
 Aplicacion movil:
 
-- Flutter (Android, iOS, Web y Desktop)
+- Flutter (Dart)
+- HTTP, Image Picker, Shared Preferences
 
-## Estructura del repositorio
+## Arquitectura por modulos
 
-- backend: API REST, autenticacion, control de acceso, logica de evidencias y servicios
-- frontend: interfaz web para gestion de proyectos, equipos y evidencias
-- mobile-app: cliente movil para operacion en campo
-- docs: documentacion tecnica del sistema
+- backend: API REST, autenticacion, reglas de negocio, base de datos y servicios de archivos
+- frontend: dashboard web para gestion de proyectos, equipos, usuarios y evidencias
+- mobile-app: app para tecnicos, enfocada en operacion y carga de evidencias
+- docs: arquitectura, modelo de datos y contexto funcional
 
-## Casos de uso principales
+## Casos de uso clave
 
-- Crear y administrar proyectos
-- Crear y administrar equipos
-- Subir evidencias asociadas a equipos/proyectos
-- Consultar evidencias y estado de avance
-- Gestionar usuarios con control por roles
+- Gestion de proyectos y equipos
+- Registro y consulta de evidencias
+- Administracion de usuarios y permisos
+- Seguimiento del avance tecnico por equipo
 
-## Levantar proyecto en local
+## Ejecucion local
 
-Requisitos:
+Requisitos minimos:
 
-- Node.js 18 o superior
-- npm 9 o superior
-- PostgreSQL 14 o superior
-- Flutter SDK (solo si ejecutarás mobile-app)
+- Node.js 18+
+- npm 9+
+- PostgreSQL 14+
+- Flutter SDK (solo para mobile-app)
 
-### 1. Backend
+### 1) Backend
 
-1. Ir a backend
+Pasos:
+
+1. Entrar a la carpeta backend
 2. Instalar dependencias
-3. Crear archivo backend/.env desde backend/.env.example
+3. Crear backend/.env desde backend/.env.example
 4. Configurar variables de base de datos y autenticacion
 5. Iniciar servidor
 
 Comandos:
 
+```bash
 cd backend
 npm install
 npm run dev
+```
 
-El backend queda disponible por defecto en http://localhost:3000
+URL por defecto: http://localhost:3000
 
-### 2. Frontend web
+### 2) Frontend web
 
-1. Ir a frontend
+Pasos:
+
+1. Entrar a la carpeta frontend
 2. Instalar dependencias
-3. Iniciar entorno de desarrollo
+3. Iniciar en modo desarrollo
 
 Comandos:
 
+```bash
 cd frontend
 npm install
 npm run dev
+```
 
-La app web queda disponible por defecto en http://localhost:3001 o http://localhost:3000 segun el puerto libre.
+URL por defecto: http://localhost:3001 (o el puerto disponible)
 
-### 3. Aplicacion movil (opcional)
+### 3) Mobile app (opcional)
 
-1. Ir a mobile-app
-2. Instalar dependencias Flutter
+Pasos:
+
+1. Entrar a la carpeta mobile-app
+2. Descargar dependencias
 3. Ejecutar en emulador o dispositivo
 
 Comandos:
 
+```bash
 cd mobile-app
 flutter pub get
 flutter run
+```
 
 ## Pruebas
 
 Backend:
 
+```bash
 cd backend
 npm test
+```
 
-## Documentacion tecnica
+## Despliegue y secretos
+
+El proyecto puede desplegarse desde GitHub sin subir archivos .env.
+
+Practica recomendada:
+
+- Mantener el codigo en el repositorio
+- Configurar variables sensibles como Secrets/Environment Variables en el proveedor
+- Inyectar secretos en runtime (no en commits)
+
+## Documentacion complementaria
 
 - docs/system-architecture.md
 - docs/database-schema.md
 - docs/project-context.md
+- docs/guia-publicacion-segura-es.md
 
-## Estado del proyecto
+## Estado
 
-MVP funcional con clientes web y movil conectados a una API central.
+MVP funcional con backend, dashboard web y app movil.
 
 ## Licencia
 
-Pendiente de definicion para publicacion (ejemplo recomendado: MIT).
+Pendiente de definicion para publicacion (sugerida: MIT).
