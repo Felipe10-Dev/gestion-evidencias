@@ -27,8 +27,8 @@ class _TeamsTabState extends State<TeamsTab> {
 
   bool get _isAdmin => widget.user.isAdmin;
   bool get _canCreateTeam {
-    final role = widget.user.rol.toLowerCase();
-    return role == 'admin' || role == 'tecnico';
+    final role = widget.user.rol.trim().toLowerCase();
+    return role == 'admin' || role == 'tecnico' || role == 'técnico';
   }
 
   @override
@@ -380,7 +380,13 @@ class _TeamsTabState extends State<TeamsTab> {
     required String? projectId,
     required ValueChanged<String?> onProjectChanged,
   }) {
-    final selectedProject = _projects.where((p) => p.id == projectId).firstOrNull;
+    ProjectModel? selectedProject;
+    for (final project in _projects) {
+      if (project.id == projectId) {
+        selectedProject = project;
+        break;
+      }
+    }
 
     return InkWell(
       borderRadius: BorderRadius.circular(16),
