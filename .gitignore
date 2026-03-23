@@ -1,0 +1,8 @@
+# Root-level local artifacts
+/app-release.apk
+/database/
+/*.apk
+
+# OS metadata
+.DS_Store
+Thumbs.db
