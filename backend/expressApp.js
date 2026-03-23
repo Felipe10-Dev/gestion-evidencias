@@ -1,6 +1,7 @@
 ﻿const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
+const { sequelize } = require("./src/config/database");
 
 const normalizeErrorResponse = require("./src/middlewares/normalizeErrorResponse");
 const sqlInjectionGuard = require("./src/middlewares/sqlInjectionGuard");
@@ -56,6 +57,24 @@ expressApp.use("/uploads", express.static("uploads"));
 
 expressApp.get("/", (req, res) => {
   res.json({ message: "API funcionando" });
+});
+
+expressApp.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok", service: "gestion-evidencias-backend" });
+});
+
+expressApp.get("/health/db", async (req, res) => {
+  try {
+    await sequelize.authenticate();
+    return res.status(200).json({ status: "ok", db: "connected" });
+  } catch (error) {
+    return res.status(500).json({
+      status: "error",
+      db: "disconnected",
+      message: error.message,
+      code: error.original?.code || null,
+    });
+  }
 });
 
 module.exports = expressApp;

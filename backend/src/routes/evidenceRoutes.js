@@ -3,6 +3,7 @@ const router = express.Router();
 
 const {
 	uploadEvidence,
+	deleteEvidenceById,
 	getTeamSubfolders,
 	createTeamSubfolder,
 	renameDriveFolderById,
@@ -14,6 +15,7 @@ const {
 } = require("../controllers/evidenceController");
 
 const authMiddleware = require("../middlewares/authMiddleware");
+const roleMiddleware = require("../middlewares/roleMiddleware");
 const upload = require("../config/multer");
 const validateBody = require("../middlewares/validateBody");
 const validateParams = require("../middlewares/validateParams");
@@ -22,6 +24,7 @@ const {
 	driveFolderIdParamSchema,
 	emptyQuerySchema,
 	evidenceCreateSubfolderSchema,
+	evidenceIdParamSchema,
 	evidenceListQuerySchema,
 	evidenceRenameFolderSchema,
 	evidenceTeamIdParamSchema,
@@ -34,6 +37,7 @@ router.post("/team/:teamId/subfolders", authMiddleware, validateParams(evidenceT
 router.patch("/folders/:folderId", authMiddleware, validateParams(driveFolderIdParamSchema), validateQuery(emptyQuerySchema), validateBody(evidenceRenameFolderSchema), renameDriveFolderById);
 
 router.get("/", authMiddleware, validateQuery(evidenceListQuerySchema), getEvidences);
+router.delete("/:id", authMiddleware, roleMiddleware("admin", "tecnico"), validateParams(evidenceIdParamSchema), validateQuery(emptyQuerySchema), deleteEvidenceById);
 router.get("/summary/projects", authMiddleware, validateQuery(emptyQuerySchema), getEvidenceSummaryByProject);
 router.get("/drive-image-count", authMiddleware, validateQuery(emptyQuerySchema), getDriveImageCount);
 router.get("/drive-tree", authMiddleware, validateQuery(emptyQuerySchema), getDriveFolders);

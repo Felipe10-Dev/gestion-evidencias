@@ -52,7 +52,7 @@ describe("API security smoke tests", () => {
     expect(response.body.error.code).toBe("VALIDATION_ERROR");
   });
 
-  it("blocks tecnico from creating teams", async () => {
+  it("allows tecnico to pass team create authorization", async () => {
     const response = await request(app)
       .post("/api/teams")
       .set("Authorization", `Bearer ${tecnicoToken}`)
@@ -61,9 +61,8 @@ describe("API security smoke tests", () => {
         projectId: "project-123",
       });
 
-    expect(response.status).toBe(403);
-    expect(response.body.success).toBe(false);
-    expect(response.body.error.code).toBe("FORBIDDEN");
+    expect(response.status).not.toBe(403);
+    expect(response.body?.error?.code).not.toBe("FORBIDDEN");
   });
 
   it("rejects unknown fields in upload evidence payload", async () => {

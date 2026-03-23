@@ -79,6 +79,10 @@ const evidenceTeamIdParamSchema = Joi.object({
   teamId: idField,
 });
 
+const evidenceIdParamSchema = Joi.object({
+  id: idField,
+});
+
 const driveFolderIdParamSchema = Joi.object({
   folderId: idField,
 });
@@ -116,6 +120,7 @@ module.exports = {
   driveFolderIdParamSchema,
   emptyQuerySchema,
   evidenceCreateSubfolderSchema,
+  evidenceIdParamSchema,
   evidenceListQuerySchema,
   evidenceRenameFolderSchema,
   evidenceTeamIdParamSchema,

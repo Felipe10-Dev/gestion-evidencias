@@ -24,6 +24,16 @@ const Evidence = sequelize.define("Evidence", {
     allowNull: false,
     field: "drive_url",
   },
+
+  drive_file_id: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+
+  drive_folder_id: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
 });
 
 module.exports = Evidence;

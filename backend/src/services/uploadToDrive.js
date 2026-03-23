@@ -39,7 +39,10 @@ const uploadToDrive = async (file, options = {}) => {
     },
   });
 
-  return `https://drive.google.com/uc?id=${fileId}`;
+  return {
+    fileId,
+    fileUrl: `https://drive.google.com/uc?id=${fileId}`,
+  };
 };
 
 module.exports = uploadToDrive;

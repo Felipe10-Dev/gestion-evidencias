@@ -72,13 +72,12 @@ const deleteProjectGraph = async (projectId, { deleteFoldersInDrive = true } = {
     const teamIds = teams.map((team) => team.id);
 
     if (teamIds.length > 0) {
-      await Evidence.update(
-        { TeamId: null },
-        {
-          where: { TeamId: teamIds },
-          transaction,
-        }
-      );
+      await Evidence.destroy({
+        where: {
+          TeamId: teamIds,
+        },
+        transaction,
+      });
 
       await Team.destroy({
         where: { id: teamIds },

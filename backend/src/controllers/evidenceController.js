@@ -3,6 +3,7 @@ const { sequelize } = require("../config/database");
 const { Evidence, Team, Project } = require("../models");
 const getGoogleDriveClient = require("../config/googleDrive");
 const uploadToDrive = require("../services/uploadToDrive");
+const deleteDriveFile = require("../services/deleteDriveFile");
 const deleteDriveFolder = require("../services/deleteDriveFolder");
 const {
   buildPaginationMeta,
@@ -11,10 +12,149 @@ const {
 } = require("../utils/pagination");
 
 const DRIVE_FOLDER_MIME_TYPE = "application/vnd.google-apps.folder";
+const DRIVE_EVIDENCE_RECONCILIATION_INTERVAL_MS = 30000;
 const PHASE_FOLDER_NAME = {
   antes: "Antes",
   durante: "Durante",
   despues: "Despues",
+};
+
+let lastEvidenceReconciliationAt = 0;
+let evidenceReconciliationInFlight = null;
+
+const isDriveNotFoundError = (err) =>
+  err?.code === 404
+  || err?.errors?.[0]?.reason === "notFound"
+  || err?.response?.status === 404;
+
+const isMissingColumnError = (err, columnName) =>
+  Boolean(err?.message && String(err.message).toLowerCase().includes(`columna «${columnName.toLowerCase()}»`));
+
+const extractDriveFileId = (value = "") => {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+
+  try {
+    const url = new URL(raw);
+    const idFromQuery = url.searchParams.get("id");
+    if (idFromQuery) return idFromQuery;
+
+    const pathMatch = url.pathname.match(/\/d\/([^/]+)/i);
+    if (pathMatch?.[1]) return pathMatch[1];
+  } catch (_) {
+    return null;
+  }
+
+  return null;
+};
+
+const collectDescendantFolderIds = async (drive, folderId) => {
+  const ids = [folderId];
+  let currentLevel = [folderId];
+
+  while (currentLevel.length > 0) {
+    const nextLevelFolders = (
+      await Promise.all(currentLevel.map((id) => listChildFolders(drive, id)))
+    ).flat();
+
+    if (!nextLevelFolders.length) {
+      break;
+    }
+
+    const nextLevelIds = nextLevelFolders.map((folder) => folder.id);
+    ids.push(...nextLevelIds);
+    currentLevel = nextLevelIds;
+  }
+
+  return [...new Set(ids.filter(Boolean))];
+};
+
+const reconcileEvidencesDeletedFromDrive = async () => {
+  const now = Date.now();
+  if (now - lastEvidenceReconciliationAt < DRIVE_EVIDENCE_RECONCILIATION_INTERVAL_MS) {
+    return;
+  }
+
+  if (evidenceReconciliationInFlight) {
+    return evidenceReconciliationInFlight;
+  }
+
+  evidenceReconciliationInFlight = (async () => {
+    try {
+      let evidences = [];
+      try {
+        evidences = await Evidence.findAll({
+          attributes: ["id", "drive_file_id", "fileUrl"],
+          raw: true,
+        });
+      } catch (error) {
+        if (!isMissingColumnError(error, "drive_file_id")) {
+          throw error;
+        }
+
+        // Backward compatibility: DB schema not migrated yet.
+        evidences = await Evidence.findAll({
+          attributes: ["id", "fileUrl"],
+          raw: true,
+        });
+      }
+
+      if (evidences.length === 0) {
+        return;
+      }
+
+      let drive;
+      try {
+        drive = getGoogleDriveClient();
+      } catch (error) {
+        console.error("[Drive] Reconciliacion de evidencias omitida por falta de credenciales:", error.message);
+        return;
+      }
+
+      const staleEvidenceIds = [];
+
+      for (const evidence of evidences) {
+        const fileId = evidence.drive_file_id || extractDriveFileId(evidence.fileUrl);
+        if (!fileId) continue;
+
+        try {
+          const { data } = await drive.files.get({
+            fileId,
+            fields: "id, trashed",
+            supportsAllDrives: true,
+          });
+
+          if (!data?.id || data?.trashed) {
+            staleEvidenceIds.push(evidence.id);
+          }
+        } catch (error) {
+          if (isDriveNotFoundError(error)) {
+            staleEvidenceIds.push(evidence.id);
+            continue;
+          }
+
+          console.error("[Drive] Error validando evidencia", evidence.id, error.message);
+        }
+      }
+
+      if (staleEvidenceIds.length > 0) {
+        await Evidence.destroy({
+          where: {
+            id: {
+              [Op.in]: staleEvidenceIds,
+            },
+          },
+        });
+
+        console.log("[Drive] Evidencias depuradas por archivo inexistente:", staleEvidenceIds.length);
+      }
+    } finally {
+      lastEvidenceReconciliationAt = Date.now();
+      evidenceReconciliationInFlight = null;
+    }
+  })();
+
+  return evidenceReconciliationInFlight;
 };
 
 const normalizeFolderName = (name = "") =>
@@ -258,17 +398,40 @@ const uploadEvidence = async (req, res) => {
       });
     }
 
-    const fileUrl = await uploadToDrive(req.file, {
+    const uploadResult = await uploadToDrive(req.file, {
       folderId: targetFolderId,
     });
 
-    const evidence = await Evidence.create({
-      descripcion: (descripcion || "").trim() || buildAutoDescription({ etapa, referencia: usedReferenciaName || referencia }),
-      etapa,
-      fileUrl,
-      TeamId: teamId,
-      UserId: req.user.id,
-    });
+    const { fileUrl, fileId: driveFileId } = uploadResult;
+
+    let evidence;
+    try {
+      evidence = await Evidence.create({
+        descripcion: (descripcion || "").trim() || buildAutoDescription({ etapa, referencia: usedReferenciaName || referencia }),
+        etapa,
+        fileUrl,
+        drive_file_id: driveFileId,
+        drive_folder_id: targetFolderId,
+        TeamId: teamId,
+        UserId: req.user.id,
+      });
+    } catch (error) {
+      const missingNewColumns =
+        isMissingColumnError(error, "drive_file_id") || isMissingColumnError(error, "drive_folder_id");
+
+      if (!missingNewColumns) {
+        throw error;
+      }
+
+      // Backward compatibility: create evidence without new tracking columns.
+      evidence = await Evidence.create({
+        descripcion: (descripcion || "").trim() || buildAutoDescription({ etapa, referencia: usedReferenciaName || referencia }),
+        etapa,
+        fileUrl,
+        TeamId: teamId,
+        UserId: req.user.id,
+      });
+    }
 
     return res.status(201).json({
       message: "Evidencia subida correctamente",
@@ -281,6 +444,8 @@ const uploadEvidence = async (req, res) => {
 
 const getEvidences = async (req, res) => {
   try {
+    await reconcileEvidencesDeletedFromDrive();
+
     const where = {};
     const paginationRequested = hasPaginationQuery(req.query);
 
@@ -322,6 +487,31 @@ const getEvidences = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+const deleteEvidenceById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const evidence = await Evidence.findByPk(id);
+
+    if (!evidence) {
+      return res.status(404).json({ error: "Evidencia no encontrada" });
+    }
+
+    const driveFileId = evidence.drive_file_id || extractDriveFileId(evidence.fileUrl);
+
+    try {
+      await deleteDriveFile(driveFileId);
+    } catch (error) {
+      console.error("[Drive] No se pudo eliminar archivo de evidencia:", driveFileId, error.message);
+    }
+
+    await evidence.destroy();
+
+    return res.json({ message: "Evidencia eliminada correctamente" });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
   }
 };
 
@@ -545,6 +735,17 @@ const deleteDriveFolderById = async (req, res) => {
       return res.status(400).json({ error: "folderId es requerido" });
     }
 
+    let affectedFolderIds = [folderId];
+
+    try {
+      const drive = getGoogleDriveClient();
+      affectedFolderIds = await collectDescendantFolderIds(drive, folderId);
+    } catch (error) {
+      if (!isDriveNotFoundError(error)) {
+        console.error("[Drive] No se pudieron listar subcarpetas para depuracion:", error.message);
+      }
+    }
+
     await deleteDriveFolder(folderId);
 
     const transaction = await sequelize.transaction();
@@ -570,8 +771,7 @@ const deleteDriveFolderById = async (req, res) => {
         const projectTeamIds = projectTeams.map((team) => team.id);
 
         if (projectTeamIds.length > 0) {
-          await Evidence.update(
-            { TeamId: null },
+          await Evidence.destroy(
             {
               where: {
                 TeamId: {
@@ -614,8 +814,7 @@ const deleteDriveFolderById = async (req, res) => {
       const matchedTeamIds = matchedTeams.map((team) => team.id);
 
       if (matchedTeamIds.length > 0) {
-        await Evidence.update(
-          { TeamId: null },
+        await Evidence.destroy(
           {
             where: {
               TeamId: {
@@ -665,6 +864,15 @@ const deleteDriveFolderById = async (req, res) => {
         { where: { drive_folder_despues_id: folderId }, transaction }
       );
 
+      await Evidence.destroy({
+        where: {
+          drive_folder_id: {
+            [Op.in]: affectedFolderIds,
+          },
+        },
+        transaction,
+      });
+
       await transaction.commit();
 
       return res.json({ message: "Carpeta eliminada en Drive (y referencias limpiadas en BD si existian)" });
@@ -683,6 +891,7 @@ module.exports = {
   createTeamSubfolder,
   renameDriveFolderById,
   getEvidences,
+  deleteEvidenceById,
   getEvidenceSummaryByProject,
   getDriveFolders,
   getDriveImageCount,

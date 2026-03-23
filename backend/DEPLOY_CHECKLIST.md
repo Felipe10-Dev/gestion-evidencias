@@ -55,12 +55,19 @@ NODE_ENV=production
 # Generate: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 JWT_SECRET=<GENERATE_NEW_STRONG_SECRET>
 
-# Database - point to PRODUCTION database
-DB_HOST=<your-production-db-host>
-DB_PORT=5432
-DB_NAME=gestion_evidencias
-DB_USER=<secure-username>
-DB_PASSWORD=<secure-password>
+# Database (Railway recommended)
+# Prefer DATABASE_URL as a variable reference from the Postgres service.
+DATABASE_URL=<RAILWAY_VARIABLE_REFERENCE>
+
+# Optional fallback if DATABASE_URL is not available
+# DB_HOST=<your-production-db-host>
+# DB_PORT=5432
+# DB_NAME=gestion_evidencias
+# DB_USER=<secure-username>
+# DB_PASSWORD=<secure-password>
+
+# Optional explicit SSL toggle (production uses SSL automatically)
+DB_SSL=true
 
 # Google Drive (keep your current values or update)
 GOOGLE_DRIVE_CREDENTIALS_PATH=./google-service-account.json
@@ -96,11 +103,19 @@ railway up
 # Test backend health
 curl https://your-backend-url.com/
 
+# Test DB connectivity directly from backend
+curl https://your-backend-url.com/health/db
+
 # Test authentication endpoint
 curl -X POST https://your-backend-url.com/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"test@example.com","password":"test123"}'
 ```
+
+### Railway Note (Important)
+- The Railway Postgres "Database" tab can show SSH parser errors even when your app is connected.
+- Trust backend logs and `/health/db` response as the source of truth.
+- In backend service variables, use **Add Variable Reference** from Postgres to inject `DATABASE_URL`.
 
 ### Step 6: Update Frontend CORS
 Update frontend API_URL to production backend URL:

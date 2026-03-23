@@ -83,10 +83,10 @@ const deleteTeam = async (req, res) => {
       return res.status(404).json({ error: "Equipo no encontrado" });
     }
 
-    await Evidence.update(
-      { TeamId: null },
-      { where: { TeamId: team.id }, transaction }
-    );
+    await Evidence.destroy({
+      where: { TeamId: team.id },
+      transaction,
+    });
 
     const folderIds = [
       team.drive_folder_antes_id,
