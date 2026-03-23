@@ -95,7 +95,7 @@ class _UploadEvidenceTabState extends State<UploadEvidenceTab>
         _teamId = nextTeamId;
       });
 
-      await _loadReferencesForSelectedTeam();
+      await _loadReferencesForSelectedTeam(preserveSelection: true);
     } catch (error) {
       if (!mounted) return;
       showAppSnackBar(context, normalizeError(error));
@@ -164,7 +164,7 @@ class _UploadEvidenceTabState extends State<UploadEvidenceTab>
     }
   }
 
-  Future<void> _loadReferencesForSelectedTeam() async {
+  Future<void> _loadReferencesForSelectedTeam({bool preserveSelection = false}) async {
     if (_teamId == null || _teamId!.isEmpty) {
       if (!mounted) return;
       setState(() {
@@ -176,16 +176,35 @@ class _UploadEvidenceTabState extends State<UploadEvidenceTab>
     }
 
     try {
+      final previousSelectedReference = _selectedReference;
+      final wasCreatingReference = _creatingReference;
+      final pendingReferenceName = _newReferenceCtrl.text.trim();
+
       final references = await ApiService.getTeamSubfolders(
         token: widget.token,
         teamId: _teamId!,
       );
 
       if (!mounted) return;
+
+      final shouldKeepCreatingReference = preserveSelection
+          && wasCreatingReference
+          && pendingReferenceName.isNotEmpty;
+
+      String? nextSelectedReference;
+      if (shouldKeepCreatingReference) {
+        nextSelectedReference = null;
+      } else if (preserveSelection && previousSelectedReference != null) {
+        final selectedStillExists = references.any(
+          (reference) => reference.name == previousSelectedReference,
+        );
+        nextSelectedReference = selectedStillExists ? previousSelectedReference : null;
+      }
+
       setState(() {
         _references = references;
-        _selectedReference = null;
-        _creatingReference = false;
+        _selectedReference = nextSelectedReference;
+        _creatingReference = shouldKeepCreatingReference;
       });
     } catch (_) {
       if (!mounted) return;
