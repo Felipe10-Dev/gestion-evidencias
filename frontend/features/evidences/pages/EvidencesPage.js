@@ -7,7 +7,7 @@ import { LoadingState } from '@/components/ui/LoadingState'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { useToast } from '@/context/toast/ToastContext'
 import { useAsyncData } from '@/hooks/useAsyncData'
-import { subscribeToDataChanges } from '@/lib/appDataEvents'
+import { notifyDataChanged, subscribeToDataChanges } from '@/lib/appDataEvents'
 import { evidencesService } from '@/services/api/evidences.service'
 
 function FolderIcon({ className = 'h-4 w-4' }) {
@@ -279,6 +279,12 @@ export function EvidencesPage() {
 
       setPendingDelete(null)
 
+      if (level === 'project') {
+        notifyDataChanged('projects')
+      } else if (level === 'team' || level === 'reference' || level === 'phase') {
+        notifyDataChanged('teams')
+      }
+
       if (level === 'reference') {
         showToast({
           title: 'Referencia eliminada',
@@ -376,6 +382,7 @@ export function EvidencesPage() {
       }))
 
       handleCloseCreateReferenceModal()
+      notifyDataChanged('teams')
       showToast({
         title: 'Referencia creada',
         description: `${newReference.name} fue creada correctamente.`,
@@ -434,6 +441,7 @@ export function EvidencesPage() {
       }))
 
       handleCloseEditReferenceModal()
+      notifyDataChanged('teams')
       showToast({
         title: 'Referencia actualizada',
         description: `${renamedReference.name} fue actualizada correctamente.`,

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -10,7 +10,7 @@ import { useToast } from '@/context/toast/ToastContext'
 import { ProjectCard } from '@/features/projects/components/ProjectCard'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { useAuth } from '@/context/auth/AuthContext'
-import { notifyDataChanged } from '@/lib/appDataEvents'
+import { notifyDataChanged, subscribeToDataChanges } from '@/lib/appDataEvents'
 import { projectsService } from '@/services/api/projects.service'
 
 function normalizeProjectsResponse(payload) {
@@ -40,10 +40,39 @@ export function ProjectsListPage() {
   const [editFormValues, setEditFormValues] = useState({ nombre: '', descripcion: '' })
   const [deletingProjectId, setDeletingProjectId] = useState('')
   const [projectPendingDelete, setProjectPendingDelete] = useState(null)
-  const { data: projects, isLoading, setData: setProjects } = useAsyncData(async () => {
+  const { data: projects, isLoading, setData: setProjects, refetch } = useAsyncData(async () => {
     const response = await projectsService.getAll()
     return normalizeProjectsResponse(response.data)
   }, [], [])
+
+  useEffect(() => {
+    const refreshProjectsData = () => {
+      refetch()
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshProjectsData()
+      }
+    }
+
+    const intervalId = window.setInterval(refreshProjectsData, 15000)
+    window.addEventListener('focus', refreshProjectsData)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    const unsubscribe = subscribeToDataChanges(({ scope }) => {
+      if (scope === 'all' || scope === 'projects' || scope === 'teams') {
+        refreshProjectsData()
+      }
+    })
+
+    return () => {
+      window.clearInterval(intervalId)
+      window.removeEventListener('focus', refreshProjectsData)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      unsubscribe()
+    }
+  }, [refetch])
 
   const refreshProjects = async () => {
     const response = await projectsService.getAll()

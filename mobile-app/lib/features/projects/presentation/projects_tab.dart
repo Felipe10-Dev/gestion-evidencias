@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -18,10 +20,13 @@ class ProjectsTab extends StatefulWidget {
 }
 
 class _ProjectsTabState extends State<ProjectsTab> {
+  static const Duration _backgroundRefreshInterval = Duration(seconds: 15);
+
   bool _loading = true;
   List<ProjectModel> _projects = const [];
   final _nameCtrl = TextEditingController();
   final _descriptionCtrl = TextEditingController();
+  Timer? _autoRefreshTimer;
 
   bool get _isAdmin => widget.user.isAdmin;
 
@@ -30,10 +35,12 @@ class _ProjectsTabState extends State<ProjectsTab> {
     super.initState();
     AppDataRefreshBus.revision.addListener(_handleExternalRefresh);
     _fetch();
+    _startAutoRefresh();
   }
 
   @override
   void dispose() {
+    _autoRefreshTimer?.cancel();
     AppDataRefreshBus.revision.removeListener(_handleExternalRefresh);
     _nameCtrl.dispose();
     _descriptionCtrl.dispose();
@@ -42,11 +49,21 @@ class _ProjectsTabState extends State<ProjectsTab> {
 
   void _handleExternalRefresh() {
     if (!mounted || _loading) return;
-    _fetch();
+    _fetch(showLoader: false);
   }
 
-  Future<void> _fetch() async {
-    setState(() => _loading = true);
+  void _startAutoRefresh() {
+    _autoRefreshTimer?.cancel();
+    _autoRefreshTimer = Timer.periodic(_backgroundRefreshInterval, (_) {
+      if (!mounted || _loading) return;
+      _fetch(showLoader: false);
+    });
+  }
+
+  Future<void> _fetch({bool showLoader = true}) async {
+    if (showLoader && mounted) {
+      setState(() => _loading = true);
+    }
     try {
       final data = await ApiService.getProjects(widget.token);
       if (!mounted) return;
@@ -55,7 +72,7 @@ class _ProjectsTabState extends State<ProjectsTab> {
       if (!mounted) return;
       showAppSnackBar(context, normalizeError(error));
     } finally {
-      if (mounted) {
+      if (showLoader && mounted) {
         setState(() => _loading = false);
       }
     }

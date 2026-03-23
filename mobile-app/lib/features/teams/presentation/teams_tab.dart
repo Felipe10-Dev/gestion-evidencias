@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -19,11 +21,14 @@ class TeamsTab extends StatefulWidget {
 }
 
 class _TeamsTabState extends State<TeamsTab> {
+  static const Duration _backgroundRefreshInterval = Duration(seconds: 15);
+
   bool _loading = true;
   List<ProjectModel> _projects = const [];
   List<TeamModel> _teams = const [];
   final _nameCtrl = TextEditingController();
   String? _selectedProjectId;
+  Timer? _autoRefreshTimer;
 
   bool get _isAdmin => widget.user.isAdmin;
   bool get _canCreateTeam {
@@ -36,10 +41,12 @@ class _TeamsTabState extends State<TeamsTab> {
     super.initState();
     AppDataRefreshBus.revision.addListener(_handleExternalRefresh);
     _fetchAll();
+    _startAutoRefresh();
   }
 
   @override
   void dispose() {
+    _autoRefreshTimer?.cancel();
     AppDataRefreshBus.revision.removeListener(_handleExternalRefresh);
     _nameCtrl.dispose();
     super.dispose();
@@ -47,13 +54,23 @@ class _TeamsTabState extends State<TeamsTab> {
 
   void _handleExternalRefresh() {
     if (!mounted || _loading) return;
-    _fetchAll();
+    _fetchAll(showLoader: false);
+  }
+
+  void _startAutoRefresh() {
+    _autoRefreshTimer?.cancel();
+    _autoRefreshTimer = Timer.periodic(_backgroundRefreshInterval, (_) {
+      if (!mounted || _loading) return;
+      _fetchAll(showLoader: false);
+    });
   }
 
   // ── Data ────────────────────────────────────────────────────────────────────
 
-  Future<void> _fetchAll() async {
-    setState(() => _loading = true);
+  Future<void> _fetchAll({bool showLoader = true}) async {
+    if (showLoader && mounted) {
+      setState(() => _loading = true);
+    }
     try {
       final results = await Future.wait([
         ApiService.getProjects(widget.token),
@@ -73,7 +90,7 @@ class _TeamsTabState extends State<TeamsTab> {
       if (!mounted) return;
       showAppSnackBar(context, normalizeError(error));
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (showLoader && mounted) setState(() => _loading = false);
     }
   }
 

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -11,7 +11,7 @@ import { TeamsTable } from '@/features/projects/components/TeamsTable'
 import { useToast } from '@/context/toast/ToastContext'
 import { useAuth } from '@/context/auth/AuthContext'
 import { useAsyncData } from '@/hooks/useAsyncData'
-import { notifyDataChanged } from '@/lib/appDataEvents'
+import { notifyDataChanged, subscribeToDataChanges } from '@/lib/appDataEvents'
 import { projectsService } from '@/services/api/projects.service'
 import { teamsService } from '@/services/api/teams.service'
 
@@ -52,7 +52,7 @@ export function ProjectDetailPage({ projectId }) {
   const [teamName, setTeamName] = useState('')
   const [editTeamName, setEditTeamName] = useState('')
 
-  const { data, isLoading, setData } = useAsyncData(async () => {
+  const { data, isLoading, setData, refetch } = useAsyncData(async () => {
     if (!projectId) return { project: null, teams: [] }
 
     const [projectResponse, teamsResponse] = await Promise.all([
@@ -68,6 +68,39 @@ export function ProjectDetailPage({ projectId }) {
     project: null,
     teams: [],
   })
+
+  useEffect(() => {
+    if (!projectId) {
+      return () => {}
+    }
+
+    const refreshProjectData = () => {
+      refetch()
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshProjectData()
+      }
+    }
+
+    const intervalId = window.setInterval(refreshProjectData, 15000)
+    window.addEventListener('focus', refreshProjectData)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    const unsubscribe = subscribeToDataChanges(({ scope }) => {
+      if (scope === 'all' || scope === 'projects' || scope === 'teams') {
+        refreshProjectData()
+      }
+    })
+
+    return () => {
+      window.clearInterval(intervalId)
+      window.removeEventListener('focus', refreshProjectData)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      unsubscribe()
+    }
+  }, [projectId, refetch])
 
   const teams = Array.isArray(data?.teams) ? data.teams.filter(Boolean) : []
   const projectName = toDisplayText(data?.project?.nombre, 'Proyecto')
