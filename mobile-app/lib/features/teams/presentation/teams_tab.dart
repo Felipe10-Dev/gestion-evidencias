@@ -349,24 +349,9 @@ class _TeamsTabState extends State<TeamsTab> {
               ),
               if (onProjectChanged != null) ...[  
                 const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  key: ValueKey(projectId ?? 'empty'),
-                  initialValue: projectId,
-                  isExpanded: true,
-                  items: _projects
-                      .map(
-                        (p) => DropdownMenuItem<String>(
-                          value: p.id,
-                          child: Text(p.nombre),
-                        ),
-                      )
-                      .toList(growable: false),
-                  onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-                  onChanged: onProjectChanged,
-                  decoration: const InputDecoration(
-                    labelText: 'Proyecto',
-                    prefixIcon: Icon(Icons.assignment_outlined, size: 20),
-                  ),
+                _buildProjectSelectorField(
+                  projectId: projectId,
+                  onProjectChanged: onProjectChanged,
                 ),
               ],
               const SizedBox(height: 18),
@@ -383,6 +368,109 @@ class _TeamsTabState extends State<TeamsTab> {
                       )
                     : const Icon(Icons.check_circle_outline, size: 18),
                 label: Text(saving ? 'Guardando...' : submitLabel),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProjectSelectorField({
+    required String? projectId,
+    required ValueChanged<String?> onProjectChanged,
+  }) {
+    final selectedProject = _projects.where((p) => p.id == projectId).firstOrNull;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: () async {
+        FocusManager.instance.primaryFocus?.unfocus();
+        final selected = await _showProjectPickerSheet(projectId);
+        if (selected != null) {
+          onProjectChanged(selected);
+        }
+      },
+      child: InputDecorator(
+        decoration: const InputDecoration(
+          labelText: 'Proyecto',
+          prefixIcon: Icon(Icons.assignment_outlined, size: 20),
+          suffixIcon: Icon(Icons.expand_more_rounded),
+        ),
+        child: Text(
+          selectedProject?.nombre ?? 'Selecciona un proyecto',
+          style: TextStyle(
+            color: selectedProject == null ? AppColors.ink300 : AppColors.ink900,
+            fontWeight: selectedProject == null ? FontWeight.w500 : FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<String?> _showProjectPickerSheet(String? currentProjectId) {
+    return showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 10),
+              Container(
+                width: 42,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.ink900.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(height: 14),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Selecciona un proyecto',
+                    style: TextStyle(
+                      color: AppColors.ink900,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: _projects.length,
+                  separatorBuilder: (_, __) => Divider(
+                    height: 1,
+                    color: AppColors.ink900.withValues(alpha: 0.06),
+                  ),
+                  itemBuilder: (_, index) {
+                    final project = _projects[index];
+                    final selected = project.id == currentProjectId;
+                    return ListTile(
+                      title: Text(project.nombre),
+                      trailing: selected
+                          ? const Icon(
+                              Icons.check_circle,
+                              color: AppColors.brandBlue,
+                              size: 20,
+                            )
+                          : null,
+                      onTap: () => Navigator.of(ctx).pop(project.id),
+                    );
+                  },
+                ),
               ),
             ],
           ),
