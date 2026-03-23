@@ -1,85 +1,82 @@
-# Dashboard Web - Gestor Evidencias
+# Dashboard Web - Gestion de Evidencias
 
-Dashboard administrativo para gestionar evidencias técnicas.
+Aplicacion web administrativa para operar proyectos, equipos, usuarios y evidencias en tiempo real.
 
-## Características
+## Modulos principales
 
-- Autenticación de usuarios.
-- Gestión de proyectos.
-- Gestión de equipos dentro de cada proyecto.
-- Visualización de evidencias.
-- Dashboard con métricas rápidas.
+- Autenticacion y sesiones
+- Dashboard con metricas
+- Gestion de proyectos y equipos
+- Gestion de evidencias y arbol de Drive
+- Gestion de usuarios por rol
 
 ## Requisitos
 
-- Node.js 16+
-- npm o yarn
+- Node.js 18+
+- npm 9+
 
-## Instalación
+## Configuracion
 
-```bash
-npm install
-```
+Crear frontend/.env.local con la URL del backend:
 
-## Configuración
-
-Crea o edita `.env.local`:
-
-```bash
+```env
 NEXT_PUBLIC_API_URL=http://localhost:3000/api
 ```
 
-## Desarrollo
+## Ejecucion local
 
 ```bash
+npm install
 npm run dev
 ```
 
-## Build
+App web en: http://localhost:3001
+
+## Build de produccion
 
 ```bash
 npm run build
 npm start
 ```
 
-## Estructura
+## Estructura tecnica
 
-- `pages/`: define rutas de Next.js y delega la lógica a módulos por dominio.
-- `features/`: pantallas y componentes agrupados por dominio (`auth`, `dashboard`, `projects`, `evidences`).
-- `components/layout`: shell principal autenticado.
-- `components/ui`: piezas reutilizables de interfaz.
-- `context/`: estado global compartido.
-- `services/api/`: acceso al backend separado por recurso.
-- `constants/`: metadatos de navegación y títulos.
-- `utils/`: utilidades pequeñas y aisladas.
-- `styles/`: estilos globales.
+- pages: rutas de Next.js
+- features: dominios de negocio (auth, dashboard, projects, evidences, users)
+- components: layout y componentes UI reutilizables
+- services/api: cliente HTTP y servicios desacoplados por recurso
+- context: estado global (auth y toasts)
+- hooks: hooks reutilizables de datos/estado
 
-## Rutas
+## Rutas funcionales
 
-- `/login`: iniciar sesión.
-- `/register`: crear usuario.
-- `/dashboard`: panel principal.
-- `/proyectos`: listado de proyectos.
-- `/proyectos/nuevo`: crear proyecto.
-- `/proyectos/[projectId]`: detalle del proyecto y sus equipos.
-- `/proyectos/equipos/nuevo?projectId=<id>`: crear equipo para un proyecto.
-- `/evidencias`: listado de evidencias.
+- /login
+- /register
+- /dashboard
+- /proyectos
+- /proyectos/nuevo
+- /proyectos/[projectId]
+- /proyectos/equipos/nuevo?projectId=<id>
+- /evidencias
+- /usuarios
 
-Compatibilidad:
-- Si alguien entra por la ruta vieja `/proyectos/:projectId/equipos/nuevo`, Next.js redirige automáticamente a `/proyectos/equipos/nuevo?projectId=:projectId`.
+## Convenciones del proyecto
 
-## Convenciones
+- Imports absolutos via alias @/
+- Logica de negocio dentro de features y services
+- Pages como capa de enrutamiento y composicion
+- Estado y notificaciones centralizados por contexto
 
-- Usa imports absolutos con `@/`.
-- Mantén `pages/` sin lógica de negocio pesada.
-- Coloca formularios, tablas y tarjetas dentro de `features/<dominio>/components`.
-- Centraliza llamadas HTTP en `services/api`.
+## Integracion con backend
 
-## FAQ de estructura
+Dependencias de API esperadas:
 
-- ¿Por qué sigue existiendo `[projectId]`?
-	Porque es un archivo dinámico (`pages/proyectos/[projectId].js`) que representa la ruta `/proyectos/:projectId`. Ya no está como carpeta anidada.
-- ¿Por qué hay varios `index.js`?
-	Porque cada carpeta de rutas puede tener su propia página base. Es convención de Next.js y es profesional si se mantiene limpia.
-- ¿Qué cambiamos para que se vea más ordenado?
-	Se eliminó la carpeta `pages/proyectos/[projectId]/` y se dejó un archivo dinámico plano más claro.
+- /api/auth/*
+- /api/projects/*
+- /api/teams/*
+- /api/evidences/*
+
+Recomendacion en produccion:
+
+- Definir NEXT_PUBLIC_API_URL con dominio real del backend
+- No exponer secretos en frontend
