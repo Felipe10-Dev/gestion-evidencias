@@ -2,6 +2,21 @@
 /app-release.apk
 /database/
 /*.apk
+**/node_modules/
+**/.next/
+**/.dart_tool/
+**/.flutter-plugins-dependencies
+
+# Flutter generated artifacts (safe to regenerate)
+mobile-app/android/.gradle/
+mobile-app/android/.kotlin/
+mobile-app/ios/Flutter/ephemeral/
+mobile-app/ios/Flutter/Generated.xcconfig
+mobile-app/ios/Flutter/flutter_export_environment.sh
+mobile-app/ios/Runner/GeneratedPluginRegistrant.h
+mobile-app/ios/Runner/GeneratedPluginRegistrant.m
+mobile-app/macos/Flutter/ephemeral/
+mobile-app/windows/flutter/ephemeral/
 
 # OS metadata
 .DS_Store
