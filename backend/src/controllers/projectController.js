@@ -11,6 +11,11 @@ const {
 } = require("../utils/pagination");
 
 const UUID_V4_OR_V1_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const DRIVE_FOLDER_MIME_TYPE = "application/vnd.google-apps.folder";
+const DRIVE_RECONCILIATION_INTERVAL_MS = 30000;
+
+let lastDriveReconciliationAt = 0;
+let driveReconciliationInFlight = null;
 
 const isWebClientRequest = (req) => String(req.headers["x-client-app"] || "").toLowerCase() === "web";
 
@@ -41,6 +46,164 @@ const getParticipatingProjectIdsByUser = async (userId) => {
   });
 
   return [...new Set(rows.map((row) => row.ProjectId).filter(Boolean))];
+};
+
+const isDriveNotFoundError = (err) =>
+  err?.code === 404
+  || err?.errors?.[0]?.reason === "notFound"
+  || err?.response?.status === 404;
+
+const deleteProjectGraph = async (projectId, { deleteFoldersInDrive = true } = {}) => {
+  const transaction = await sequelize.transaction();
+
+  try {
+    const project = await Project.findByPk(projectId, { transaction });
+
+    if (!project) {
+      await transaction.rollback();
+      return { deleted: false };
+    }
+
+    const teams = await Team.findAll({
+      where: { ProjectId: project.id },
+      transaction,
+    });
+
+    const teamIds = teams.map((team) => team.id);
+
+    if (teamIds.length > 0) {
+      await Evidence.update(
+        { TeamId: null },
+        {
+          where: { TeamId: teamIds },
+          transaction,
+        }
+      );
+
+      await Team.destroy({
+        where: { id: teamIds },
+        transaction,
+      });
+    }
+
+    const teamFolderIds = teams.flatMap((t) => [
+      t.drive_folder_antes_id,
+      t.drive_folder_durante_id,
+      t.drive_folder_despues_id,
+      t.drive_folder_id,
+    ]).filter(Boolean);
+    const projectFolderId = project.drive_folder_id;
+
+    await project.destroy({ transaction });
+    await transaction.commit();
+
+    if (!deleteFoldersInDrive) {
+      return { deleted: true };
+    }
+
+    for (const fid of teamFolderIds) {
+      try {
+        await deleteDriveFolder(fid);
+      } catch (e) {
+        console.error("[Drive] No se pudo borrar carpeta de equipo", fid, e.message);
+      }
+    }
+
+    try {
+      await deleteDriveFolder(projectFolderId);
+    } catch (e) {
+      console.error("[Drive] No se pudo borrar carpeta de proyecto", projectFolderId, e.message);
+    }
+
+    return { deleted: true };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+};
+
+const reconcileProjectsDeletedFromDrive = async () => {
+  const now = Date.now();
+  if (now - lastDriveReconciliationAt < DRIVE_RECONCILIATION_INTERVAL_MS) {
+    return;
+  }
+
+  if (driveReconciliationInFlight) {
+    return driveReconciliationInFlight;
+  }
+
+  driveReconciliationInFlight = (async () => {
+    try {
+      const projectsWithDriveFolder = await Project.findAll({
+        attributes: ["id", "drive_folder_id"],
+        where: {
+          drive_folder_id: {
+            [Op.ne]: null,
+          },
+        },
+        raw: true,
+      });
+
+      if (projectsWithDriveFolder.length === 0) {
+        return;
+      }
+
+      let drive;
+      try {
+        drive = getGoogleDriveClient();
+      } catch (error) {
+        console.error("[Drive] Reconciliacion omitida por falta de credenciales:", error.message);
+        return;
+      }
+
+      const staleProjectIds = [];
+
+      for (const project of projectsWithDriveFolder) {
+        if (!project.drive_folder_id) continue;
+
+        try {
+          const { data } = await drive.files.get({
+            fileId: project.drive_folder_id,
+            fields: "id, mimeType, trashed",
+            supportsAllDrives: true,
+          });
+
+          const folderIsMissing = !data?.id;
+          const folderIsTrashed = !!data?.trashed;
+          const invalidMimeType = data?.mimeType !== DRIVE_FOLDER_MIME_TYPE;
+
+          if (folderIsMissing || folderIsTrashed || invalidMimeType) {
+            staleProjectIds.push(project.id);
+          }
+        } catch (error) {
+          if (isDriveNotFoundError(error)) {
+            staleProjectIds.push(project.id);
+            continue;
+          }
+
+          console.error(
+            "[Drive] Error validando carpeta de proyecto",
+            project.drive_folder_id,
+            error.message
+          );
+        }
+      }
+
+      for (const staleProjectId of staleProjectIds) {
+        try {
+          await deleteProjectGraph(staleProjectId, { deleteFoldersInDrive: false });
+          console.log("[Drive] Proyecto removido por carpeta inexistente en Drive:", staleProjectId);
+        } catch (error) {
+          console.error("[Drive] No se pudo depurar proyecto desincronizado:", staleProjectId, error.message);
+        }
+      }
+    } finally {
+      lastDriveReconciliationAt = Date.now();
+      driveReconciliationInFlight = null;
+    }
+  })();
+
+  return driveReconciliationInFlight;
 };
 
 const getProjectById = async (req, res) => {
@@ -89,6 +252,8 @@ const createProject = async (req, res) => {
 
 const getProjects = async (req, res) => {
   try {
+    await reconcileProjectsDeletedFromDrive();
+
     const where = {};
     const paginationRequested = hasPaginationQuery(req.query);
 
@@ -177,63 +342,14 @@ const updateProject = async (req, res) => {
 };
 
 const deleteProject = async (req, res) => {
-  const transaction = await sequelize.transaction();
-
   try {
-    const project = await Project.findByPk(req.params.id, { transaction });
-
-    if (!project) {
-      await transaction.rollback();
+    const result = await deleteProjectGraph(req.params.id);
+    if (!result.deleted) {
       return res.status(404).json({ error: "Proyecto no encontrado" });
-    }
-
-    const teams = await Team.findAll({
-      where: { ProjectId: project.id },
-      transaction,
-    });
-
-    const teamIds = teams.map((team) => team.id);
-
-    if (teamIds.length > 0) {
-      await Evidence.update(
-        { TeamId: null },
-        {
-          where: { TeamId: teamIds },
-          transaction,
-        }
-      );
-
-      await Team.destroy({
-        where: { id: teamIds },
-        transaction,
-      });
-    }
-
-    // Collect all Drive folder IDs before destroying
-    const teamFolderIds = teams.flatMap((t) => [
-      t.drive_folder_antes_id,
-      t.drive_folder_durante_id,
-      t.drive_folder_despues_id,
-      t.drive_folder_id,
-    ]);
-    const projectFolderId = project.drive_folder_id;
-
-    await project.destroy({ transaction });
-    await transaction.commit();
-
-    // Delete Drive folders after DB commit (team subfolders first, then project)
-    for (const fid of teamFolderIds) {
-      try { await deleteDriveFolder(fid); } catch (e) {
-        console.error("[Drive] No se pudo borrar carpeta de equipo", fid, e.message);
-      }
-    }
-    try { await deleteDriveFolder(projectFolderId); } catch (e) {
-      console.error("[Drive] No se pudo borrar carpeta de proyecto", projectFolderId, e.message);
     }
 
     res.json({ message: "Proyecto eliminado correctamente" });
   } catch (error) {
-    await transaction.rollback();
     res.status(500).json({ error: error.message });
   }
 };
