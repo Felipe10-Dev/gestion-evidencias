@@ -26,6 +26,10 @@ class _TeamsTabState extends State<TeamsTab> {
   String? _selectedProjectId;
 
   bool get _isAdmin => widget.user.isAdmin;
+  bool get _canCreateTeam {
+    final role = widget.user.rol.toLowerCase();
+    return role == 'admin' || role == 'tecnico';
+  }
 
   @override
   void initState() {
@@ -84,7 +88,9 @@ class _TeamsTabState extends State<TeamsTab> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (sheetCtx) => Padding(
+      builder: (sheetCtx) => AnimatedPadding(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(sheetCtx).viewInsets.bottom,
         ),
@@ -142,7 +148,9 @@ class _TeamsTabState extends State<TeamsTab> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (sheetCtx) => Padding(
+      builder: (sheetCtx) => AnimatedPadding(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(sheetCtx).viewInsets.bottom,
         ),
@@ -344,6 +352,7 @@ class _TeamsTabState extends State<TeamsTab> {
                 DropdownButtonFormField<String>(
                   key: ValueKey(projectId ?? 'empty'),
                   initialValue: projectId,
+                  isExpanded: true,
                   items: _projects
                       .map(
                         (p) => DropdownMenuItem<String>(
@@ -352,6 +361,7 @@ class _TeamsTabState extends State<TeamsTab> {
                         ),
                       )
                       .toList(growable: false),
+                  onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
                   onChanged: onProjectChanged,
                   decoration: const InputDecoration(
                     labelText: 'Proyecto',
@@ -458,7 +468,7 @@ class _TeamsTabState extends State<TeamsTab> {
   }
 
   Widget _buildCreateCallToAction() {
-    if (!_isAdmin) return const SizedBox.shrink();
+    if (!_canCreateTeam) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: _buildAdminCreateBanner(),
@@ -763,6 +773,8 @@ class _TeamsTabState extends State<TeamsTab> {
                   const SizedBox(height: 6),
                   Text(
                     _isAdmin
+                        ? 'Crea el primer equipo para organizar las evidencias.'
+                      : _canCreateTeam
                         ? 'Crea el primer equipo para organizar las evidencias.'
                         : 'Aún no hay equipos asignados para mostrar.',
                     textAlign: TextAlign.center,

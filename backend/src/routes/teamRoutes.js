@@ -17,7 +17,7 @@ const {
 	teamUpdateSchema,
 } = require("../validation/bodySchemas");
 
-router.post("/", authMiddleware, roleMiddleware("admin"), validateQuery(emptyQuerySchema), validateBody(teamCreateSchema), createTeam);
+router.post("/", authMiddleware, roleMiddleware("admin", "tecnico"), validateQuery(emptyQuerySchema), validateBody(teamCreateSchema), createTeam);
 
 router.get("/", authMiddleware, validateQuery(teamListQuerySchema), getTeams);
 
