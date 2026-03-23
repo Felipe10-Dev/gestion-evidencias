@@ -667,7 +667,7 @@ class _TeamsTabState extends State<TeamsTab> {
               ),
             ),
             const SizedBox(width: 6),
-            _isAdmin
+            _canCreateTeam
                 ? PopupMenuButton<String>(
                     icon: const Icon(
                       Icons.more_vert,

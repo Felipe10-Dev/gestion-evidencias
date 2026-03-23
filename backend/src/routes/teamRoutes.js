@@ -23,9 +23,9 @@ router.get("/", authMiddleware, validateQuery(teamListQuerySchema), getTeams);
 
 router.get("/:id", authMiddleware, validateParams(teamIdParamSchema), validateQuery(emptyQuerySchema), getTeamById);
 
-router.put("/:id", authMiddleware, roleMiddleware("admin"), validateParams(teamIdParamSchema), validateQuery(emptyQuerySchema), validateBody(teamUpdateSchema), updateTeam);
+router.put("/:id", authMiddleware, roleMiddleware("admin", "tecnico"), validateParams(teamIdParamSchema), validateQuery(emptyQuerySchema), validateBody(teamUpdateSchema), updateTeam);
 
-router.delete("/:id", authMiddleware, roleMiddleware("admin"), validateParams(teamIdParamSchema), validateQuery(emptyQuerySchema), deleteTeam);
+router.delete("/:id", authMiddleware, roleMiddleware("admin", "tecnico"), validateParams(teamIdParamSchema), validateQuery(emptyQuerySchema), deleteTeam);
 
 router.put("/:id/assign-project", authMiddleware, roleMiddleware("admin"), validateParams(teamIdParamSchema), validateQuery(emptyQuerySchema), validateBody(teamAssignProjectSchema), assignTeamToProject);
 
