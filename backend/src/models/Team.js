@@ -16,18 +16,6 @@ const Team = sequelize.define("Team", {
   drive_folder_id: {
     type: DataTypes.STRING,
   },
-
-  drive_folder_antes_id: {
-    type: DataTypes.STRING,
-  },
-
-  drive_folder_durante_id: {
-    type: DataTypes.STRING,
-  },
-
-  drive_folder_despues_id: {
-    type: DataTypes.STRING,
-  },
 });
 
 module.exports = Team;

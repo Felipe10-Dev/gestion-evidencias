@@ -85,12 +85,7 @@ const deleteProjectGraph = async (projectId, { deleteFoldersInDrive = true } = {
       });
     }
 
-    const teamFolderIds = teams.flatMap((t) => [
-      t.drive_folder_antes_id,
-      t.drive_folder_durante_id,
-      t.drive_folder_despues_id,
-      t.drive_folder_id,
-    ]).filter(Boolean);
+    const teamFolderIds = teams.map((t) => t.drive_folder_id).filter(Boolean);
     const projectFolderId = project.drive_folder_id;
 
     await project.destroy({ transaction });

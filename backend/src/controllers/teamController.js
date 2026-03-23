@@ -88,12 +88,7 @@ const deleteTeam = async (req, res) => {
       transaction,
     });
 
-    const folderIds = [
-      team.drive_folder_antes_id,
-      team.drive_folder_durante_id,
-      team.drive_folder_despues_id,
-      team.drive_folder_id,
-    ];
+    const folderIds = [team.drive_folder_id];
 
     await team.destroy({ transaction });
     await transaction.commit();

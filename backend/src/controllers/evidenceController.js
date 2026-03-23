@@ -184,11 +184,7 @@ const listChildFolders = async (drive, parentId) => {
   return folders;
 };
 
-const STAGE_FOLDER_FIELD = {
-  antes: "drive_folder_antes_id",
-  durante: "drive_folder_durante_id",
-  despues: "drive_folder_despues_id",
-};
+const ALLOWED_STAGES = new Set(["antes", "durante", "despues"]);
 
 const createDriveFolder = async (drive, parentId, name) => {
   const response = await drive.files.create({
@@ -360,7 +356,7 @@ const uploadEvidence = async (req, res) => {
       });
     }
 
-    if (!etapa || !STAGE_FOLDER_FIELD[etapa]) {
+    if (!etapa || !ALLOWED_STAGES.has(etapa)) {
       return res.status(400).json({
         message: "etapa es obligatoria y debe ser antes, durante o despues",
       });
@@ -847,21 +843,6 @@ const deleteDriveFolderById = async (req, res) => {
       await Team.update(
         { drive_folder_id: null },
         { where: { drive_folder_id: folderId }, transaction }
-      );
-
-      await Team.update(
-        { drive_folder_antes_id: null },
-        { where: { drive_folder_antes_id: folderId }, transaction }
-      );
-
-      await Team.update(
-        { drive_folder_durante_id: null },
-        { where: { drive_folder_durante_id: folderId }, transaction }
-      );
-
-      await Team.update(
-        { drive_folder_despues_id: null },
-        { where: { drive_folder_despues_id: folderId }, transaction }
       );
 
       await Evidence.destroy({
