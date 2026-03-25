@@ -281,14 +281,27 @@ export function EvidencesPage() {
 
       if (level === 'project') {
         notifyDataChanged('projects')
-      } else if (level === 'team' || level === 'reference' || level === 'phase') {
+        showToast({
+          title: 'Proyecto eliminado',
+          description: `"${pendingDelete.nombre}" se eliminó correctamente.`,
+        })
+      } else if (level === 'team') {
         notifyDataChanged('teams')
-      }
-
-      if (level === 'reference') {
+        showToast({
+          title: 'Equipo eliminado',
+          description: `"${pendingDelete.nombre}" se eliminó correctamente.`,
+        })
+      } else if (level === 'reference') {
+        notifyDataChanged('teams')
         showToast({
           title: 'Referencia eliminada',
           description: `"${pendingDelete.nombre}" se eliminó correctamente.`,
+        })
+      } else if (level === 'phase') {
+        notifyDataChanged('teams')
+        showToast({
+          title: 'Fase eliminada',
+          description: `"${pendingDelete.nombre || phaseKey || ''}" se eliminó correctamente.`,
         })
       }
     } catch (error) {
