@@ -35,7 +35,9 @@ cp .env.example .env
 
 ### Produccion (recomendado): Service Account (estable)
 
-Para venderlo sin caidas por tokens, lo mas estable es usar una **cuenta de servicio** y compartir la carpeta raiz con el correo `...@...iam.gserviceaccount.com` (permiso **Editor**).
+Para venderlo sin caidas por tokens, lo mas estable es usar una **cuenta de servicio** y una **Unidad compartida (Shared Drive)**. Comparte la carpeta raiz con el correo `...@...iam.gserviceaccount.com` (permiso **Editor**).
+
+Nota: En Drive personal ("Mi unidad"), una service account puede listar si le compartes, pero **no puede subir archivos** (no tiene cuota). En ese caso usa OAuth.
 
 Variables recomendadas:
 
@@ -55,6 +57,12 @@ Si quieres operar con OAuth2 (cuenta personal), define estas variables:
 - GOOGLE_OAUTH_CLIENT_ID
 - GOOGLE_OAUTH_CLIENT_SECRET
 - GOOGLE_OAUTH_REFRESH_TOKEN
+
+Generar refresh token (local):
+
+```bash
+node scripts/generateDriveRefreshToken.js
+```
 
 Notas importantes (no hay garantia de “nunca expira”):
 
