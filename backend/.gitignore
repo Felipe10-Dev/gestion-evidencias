@@ -1,5 +1,7 @@
 node_modules/
 .env
+.refresh_token.txt
+.oauth_code.txt
 google-service-account.json
 autenticacion-*.json
 *-service-account*.json

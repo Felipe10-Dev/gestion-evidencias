@@ -2,6 +2,8 @@
 
 require("dotenv").config();
 
+const fs = require("fs");
+const path = require("path");
 const readline = require("readline");
 const { google } = require("googleapis");
 
@@ -29,7 +31,12 @@ const extractCode = (value) => {
     const url = new URL(raw);
     return url.searchParams.get("code") || "";
   } catch (_) {
-    return raw;
+    // Allow pasting querystring fragments too.
+    const match = raw.match(/(?:^|[?&])code=([^&]+)/);
+    if (match?.[1]) return match[1];
+
+    // If user pasted something like: "4/....&scope=..." take the first part.
+    return raw.split("&")[0].trim();
   }
 };
 
@@ -37,6 +44,7 @@ const main = async () => {
   const clientId = String(process.env.GOOGLE_OAUTH_CLIENT_ID || "").trim();
   const clientSecret = String(process.env.GOOGLE_OAUTH_CLIENT_SECRET || "").trim();
   const redirectUri = String(process.env.GOOGLE_OAUTH_REDIRECT_URI || DEFAULT_REDIRECT_URI).trim();
+  const outputFile = String(process.env.GOOGLE_OAUTH_REFRESH_TOKEN_FILE || ".refresh_token.txt").trim();
 
   if (!clientId || !clientSecret) {
     throw new Error(
@@ -76,9 +84,14 @@ const main = async () => {
     return;
   }
 
-  console.log("\nLISTO. Guarda esto en Railway como GOOGLE_OAUTH_REFRESH_TOKEN:");
-  console.log(tokens.refresh_token);
-  console.log("\n(Deja GOOGLE_DRIVE_AUTH_MODE=oauth en produccion.)");
+  const absoluteOutputPath = path.resolve(process.cwd(), outputFile);
+  fs.writeFileSync(absoluteOutputPath, `${tokens.refresh_token}\n`, { encoding: "utf8" });
+
+  console.log("\nLISTO.");
+  console.log("Refresh token guardado en:");
+  console.log(absoluteOutputPath);
+  console.log("\nCopia ese valor y ponlo en Railway como GOOGLE_OAUTH_REFRESH_TOKEN (no lo pegues en el chat)." );
+  console.log("(Deja GOOGLE_DRIVE_AUTH_MODE=oauth en produccion.)");
 };
 
 main().catch((err) => {
