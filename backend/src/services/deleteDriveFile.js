@@ -11,7 +11,7 @@ const deleteDriveFile = async (fileId) => {
   const drive = getGoogleDriveClient();
 
   try {
-    await drive.files.delete({ fileId });
+    await drive.files.delete({ fileId, supportsAllDrives: true });
   } catch (err) {
     if (err.code === 404 || (err.errors && err.errors[0]?.reason === "notFound")) {
       return;

@@ -31,6 +31,38 @@ cp .env.example .env
 - DATABASE_URL o DB_* / PG*
 - Credenciales de Google Drive
 
+## Google Drive
+
+### Produccion (recomendado): Service Account (estable)
+
+Para venderlo sin caidas por tokens, lo mas estable es usar una **cuenta de servicio** y compartir la carpeta raiz con el correo `...@...iam.gserviceaccount.com` (permiso **Editor**).
+
+Variables recomendadas:
+
+- GOOGLE_DRIVE_AUTH_MODE=service_account
+- GOOGLE_DRIVE_FOLDER_ID
+
+Credencial (elige una):
+
+- GOOGLE_DRIVE_CREDENTIALS_JSON (JSON directo o base64 del JSON)
+- GOOGLE_DRIVE_CREDENTIALS_PATH (solo si el proveedor permite archivos)
+
+### OAuth (opcional): cuenta personal (puede revocarse/expirar)
+
+Si quieres operar con OAuth2 (cuenta personal), define estas variables:
+
+- GOOGLE_DRIVE_AUTH_MODE=oauth
+- GOOGLE_OAUTH_CLIENT_ID
+- GOOGLE_OAUTH_CLIENT_SECRET
+- GOOGLE_OAUTH_REFRESH_TOKEN
+
+Notas importantes (no hay garantia de “nunca expira”):
+
+- Publica/ajusta la pantalla OAuth consent para que no quede en modo de pruebas con usuarios limitados.
+- Solicita siempre offline access al generar el token (access_type=offline y prompt=consent).
+- No regeneres tokens muchas veces con el mismo usuario/cliente OAuth (Google puede revocar los anteriores).
+- Si cambias credenciales OAuth (client secret/client id), regenera el refresh token.
+
 ## Ejecucion local
 
 ```bash

@@ -171,6 +171,8 @@ const listChildFolders = async (drive, parentId) => {
   do {
     const response = await drive.files.list({
       q: `'${parentId}' in parents and mimeType='${DRIVE_FOLDER_MIME_TYPE}' and trashed=false`,
+      includeItemsFromAllDrives: true,
+      supportsAllDrives: true,
       fields: "nextPageToken, files(id, name, createdTime, modifiedTime)",
       orderBy: "name",
       pageToken,
@@ -193,6 +195,7 @@ const createDriveFolder = async (drive, parentId, name) => {
       mimeType: DRIVE_FOLDER_MIME_TYPE,
       parents: [parentId],
     },
+    supportsAllDrives: true,
     fields: "id, name",
   });
 
@@ -327,6 +330,7 @@ const renameDriveFolderById = async (req, res) => {
     await drive.files.update({
       fileId: folderId,
       resource: { name: nombre },
+      supportsAllDrives: true,
       fields: "id, name",
     });
 
@@ -682,6 +686,8 @@ const countImagesInFolders = async (drive, folderIds) => {
       do {
         const response = await drive.files.list({
           q: `'${folderId}' in parents and mimeType contains 'image/' and trashed=false`,
+          includeItemsFromAllDrives: true,
+          supportsAllDrives: true,
           fields: "nextPageToken, files(id)",
           pageSize: 1000,
           pageToken,

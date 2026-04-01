@@ -69,12 +69,24 @@ DATABASE_URL=<RAILWAY_VARIABLE_REFERENCE>
 # Optional explicit SSL toggle (production uses SSL automatically)
 DB_SSL=true
 
-# Google Drive (keep your current values or update)
-GOOGLE_DRIVE_CREDENTIALS_PATH=./google-service-account.json
-GOOGLE_DRIVE_FOLDER_ID=<your-shared-drive-folder-id>
-GOOGLE_OAUTH_CLIENT_ID=<your-oauth-client-id>
-GOOGLE_OAUTH_CLIENT_SECRET=<your-oauth-client-secret>
-GOOGLE_OAUTH_REFRESH_TOKEN=<your-oauth-refresh-token>
+# Google Drive (PRODUCCION RECOMENDADO: Service Account)
+# NOTA: OAuth refresh tokens pueden revocarse/expirar (especialmente si el consent screen esta en "Testing").
+# Para un entorno de empresa, usa Service Account + compartir carpeta con el correo del service account.
+GOOGLE_DRIVE_AUTH_MODE=service_account
+GOOGLE_DRIVE_FOLDER_ID=<drive-root-folder-id>
+
+# Opcion A (recomendado en Railway/Render/etc): credencial por variable de entorno
+# Puede ser JSON directo o base64 del JSON.
+GOOGLE_DRIVE_CREDENTIALS_JSON=<service-account-json-or-base64>
+
+# Opcion B (solo local): credencial por archivo
+# GOOGLE_DRIVE_CREDENTIALS_PATH=./google-service-account.json
+
+# (Opcional) OAuth de usuario - NO recomendado para produccion
+# GOOGLE_DRIVE_AUTH_MODE=oauth
+# GOOGLE_OAUTH_CLIENT_ID=<your-oauth-client-id>
+# GOOGLE_OAUTH_CLIENT_SECRET=<your-oauth-client-secret>
+# GOOGLE_OAUTH_REFRESH_TOKEN=<your-oauth-refresh-token>
 
 # CORS - set to your PRODUCTION frontend URL
 CORS_ALLOWED_ORIGINS=https://tu-dominio-frontend.com
@@ -116,6 +128,11 @@ curl -X POST https://your-backend-url.com/api/auth/login \
 - The Railway Postgres "Database" tab can show SSH parser errors even when your app is connected.
 - Trust backend logs and `/health/db` response as the source of truth.
 - In backend service variables, use **Add Variable Reference** from Postgres to inject `DATABASE_URL`.
+
+### Railway Note (Google Drive - Important)
+- Si usas Service Account, debes **compartir** la carpeta `GOOGLE_DRIVE_FOLDER_ID` con el correo `...@...iam.gserviceaccount.com` y dar permiso **Editor**.
+- Si la carpeta esta en una **Unidad compartida**, agrega tambien esa cuenta como miembro de la unidad.
+- En Railway, es mas estable usar `GOOGLE_DRIVE_CREDENTIALS_JSON` (no archivos).
 
 ### Step 6: Update Frontend CORS
 Update frontend API_URL to production backend URL:

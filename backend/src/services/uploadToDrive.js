@@ -26,6 +26,7 @@ const uploadToDrive = async (file, options = {}) => {
   const createdFile = await drive.files.create({
     resource: fileMetadata,
     media,
+    supportsAllDrives: true,
     fields: "id",
   });
 
@@ -33,6 +34,7 @@ const uploadToDrive = async (file, options = {}) => {
 
   await drive.permissions.create({
     fileId,
+    supportsAllDrives: true,
     requestBody: {
       role: "reader",
       type: "anyone",

@@ -20,6 +20,7 @@ const createDriveFolder = async (name, parentFolderId = null) => {
 
   const folder = await drive.files.create({
     resource: fileMetadata,
+    supportsAllDrives: true,
     fields: "id",
   });
 
