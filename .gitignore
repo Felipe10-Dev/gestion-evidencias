@@ -2,10 +2,15 @@
 /app-release.apk
 /database/
 /*.apk
+
+# Env files (never commit secrets)
+.env
+.env.*
 **/node_modules/
 **/.next/
 **/.dart_tool/
 **/.flutter-plugins-dependencies
+mobile-app/build/
 
 # Flutter generated artifacts (safe to regenerate)
 mobile-app/android/.gradle/

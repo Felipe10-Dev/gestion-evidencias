@@ -12,6 +12,17 @@ const teamRoutes = require("./src/routes/teamRoutes");
 
 const expressApp = express();
 
+// Behind Railway/Reverse proxies we need trust proxy for correct client IP.
+// Keep it configurable to avoid spoofing IPs in non-proxied environments.
+const isProduction = process.env.NODE_ENV === "production";
+const trustProxyRaw = String(process.env.TRUST_PROXY || "").trim().toLowerCase();
+const trustProxyValue =
+  trustProxyRaw === "true" ? 1 : trustProxyRaw === "false" ? 0 : isProduction ? 1 : 0;
+
+if (trustProxyValue) {
+  expressApp.set("trust proxy", trustProxyValue);
+}
+
 const envOrigins = String(process.env.CORS_ALLOWED_ORIGINS || "")
   .split(",")
   .map((origin) => origin.trim())

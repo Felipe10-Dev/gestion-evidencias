@@ -5,7 +5,12 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
-    "test": "jest --runInBand"
+    "test": "jest --runInBand",
+    "db:inspect": "node scripts/inspectDbSchema.js",
+    "db:create": "node scripts/createDatabase.js",
+    "db:single-tenant:plan": "node scripts/cleanupSingleTenant.js",
+    "db:single-tenant:apply": "node scripts/cleanupSingleTenant.js",
+    "code:audit": "node scripts/auditUnusedCode.js"
   },
   "keywords": [],
   "author": "",

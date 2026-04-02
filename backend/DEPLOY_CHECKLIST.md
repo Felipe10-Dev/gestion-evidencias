@@ -51,6 +51,9 @@ Before deploying, update `.env` or hosting env vars:
 PORT=3000
 NODE_ENV=production
 
+# Behind Railway/Reverse proxy
+TRUST_PROXY=true
+
 # JWT Secret - use a DIFFERENT one for production!
 # Generate: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 JWT_SECRET=<GENERATE_NEW_STRONG_SECRET>
@@ -68,6 +71,10 @@ DATABASE_URL=<RAILWAY_VARIABLE_REFERENCE>
 
 # Optional explicit SSL toggle (production uses SSL automatically)
 DB_SSL=true
+
+# Schema safety (recommended)
+DB_RUN_MIGRATIONS=true
+DB_SYNC_ALTER=false
 
 # Google Drive (PRODUCCION RECOMENDADO: Service Account)
 # NOTA: OAuth refresh tokens pueden revocarse/expirar (especialmente si el consent screen esta en "Testing").
@@ -94,8 +101,12 @@ CORS_ALLOWED_ORIGINS=https://tu-dominio-frontend.com
 
 ### Step 3: Database Setup (10 min)
 - [ ] Ensure production PostgreSQL database exists
-- [ ] Run migrations/initialize schema (if using migrations)
+- [ ] Run migrations/initialize schema (the backend runs additive-only migrations on startup by default)
 - [ ] Backup local DB if needed before switching
+
+**Important (Railway/Production):**
+- Set `DB_SYNC_ALTER=false` to avoid destructive schema alterations.
+- Keep `DB_RUN_MIGRATIONS=true` so missing columns are added safely.
 
 ### Step 4: Deploy Backend (with chosen hosting)
 **Railway Example**:

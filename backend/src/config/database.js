@@ -12,10 +12,18 @@ const pgFallbackByDbKey = {
   DB_PASSWORD: "PGPASSWORD",
 };
 
-const shouldUseSSL =
-  process.env.DB_SSL === "true" ||
-  isProduction ||
-  Boolean(databaseUrl);
+const resolveShouldUseSSL = () => {
+  const raw = String(process.env.DB_SSL || "").trim().toLowerCase();
+
+  // Explicit override always wins.
+  if (raw === "true") return true;
+  if (raw === "false") return false;
+
+  // Default: enable SSL only in production.
+  return isProduction;
+};
+
+const shouldUseSSL = resolveShouldUseSSL();
 
 const connectionSource = process.env.DATABASE_URL
   ? "DATABASE_URL"
@@ -50,13 +58,13 @@ const baseOptions = {
 const sequelize = databaseUrl
   ? new Sequelize(databaseUrl, baseOptions)
   : new Sequelize(
-      process.env.DB_NAME || process.env.PGDATABASE,
-      process.env.DB_USER || process.env.PGUSER,
-      process.env.DB_PASSWORD || process.env.PGPASSWORD,
+      process.env.PGDATABASE || process.env.DB_NAME,
+      process.env.PGUSER || process.env.DB_USER,
+      process.env.PGPASSWORD || process.env.DB_PASSWORD,
       {
         ...baseOptions,
-        host: process.env.DB_HOST || process.env.PGHOST,
-        port: process.env.DB_PORT || process.env.PGPORT,
+        host: process.env.PGHOST || process.env.DB_HOST,
+        port: process.env.PGPORT || process.env.DB_PORT,
       }
     );
 

@@ -1,13 +1,25 @@
 const request = require("supertest");
 const jwt = require("jsonwebtoken");
+
+// Keep Jest output clean: dotenv v17 logs tips by default unless quiet.
+process.env.DOTENV_CONFIG_QUIET = "true";
 require("dotenv").config();
 
+// Ensure tests don't depend on a checked-in .env.
+process.env.JWT_SECRET ||= "test-secret";
+
 const app = require("../expressApp");
+const { sequelize } = require("../src/config/database");
 
 const adminToken = jwt.sign({ id: "test-admin", rol: "admin" }, process.env.JWT_SECRET);
 const tecnicoToken = jwt.sign({ id: "test-tech", rol: "tecnico" }, process.env.JWT_SECRET);
 
 describe("API security smoke tests", () => {
+  afterAll(async () => {
+    // Prevent Jest from hanging on open Sequelize pool handles.
+    await sequelize.close();
+  });
+
   it("rejects unknown fields in auth login payload", async () => {
     const response = await request(app)
       .post("/api/auth/login")

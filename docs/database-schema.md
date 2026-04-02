@@ -7,7 +7,8 @@ nombre
 email
 password
 rol
-fecha_creacion
+createdAt
+updatedAt
 
 Roles posibles:
 
@@ -19,14 +20,18 @@ tecnico
 id
 nombre
 descripcion
-fecha_creacion
+drive_folder_id
+createdAt
+updatedAt
 
 ## Tabla equipos
 
 id
 nombre
-proyecto_id
 drive_folder_id
+ProjectId
+createdAt
+updatedAt
 
 Relación:
 
@@ -35,11 +40,15 @@ un proyecto tiene muchos equipos
 ## Tabla evidencias
 
 id
-equipo_id
-usuario_id
+descripcion
 etapa
 drive_url
-fecha
+drive_file_id
+drive_folder_id
+TeamId
+UserId
+createdAt
+updatedAt
 
 Etapas posibles:
 

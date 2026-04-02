@@ -3,45 +3,18 @@ const { sequelize } = require("../config/database");
 const { Team, Evidence, Project } = require("../models");
 const createDriveFolder = require("../services/createDriveFolder");
 const deleteDriveFolder = require("../services/deleteDriveFolder");
-const getGoogleDriveClient = require("../config/googleDrive");
+const renameDriveItem = require("../services/drive/renameDriveItem");
+const deleteTeamGraph = require("../services/teams/deleteTeamGraph");
+const {
+  getParticipatingProjectIdsByUser,
+  isWebClientRequest,
+} = require("../utils/projectScope");
 const {
   buildPaginationMeta,
   hasPaginationQuery,
   parsePaginationQuery,
 } = require("../utils/pagination");
-
-const UUID_V4_OR_V1_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-const isWebClientRequest = (req) => String(req.headers["x-client-app"] || "").toLowerCase() === "web";
-
-const getParticipatingProjectIdsByUser = async (userId) => {
-  if (!UUID_V4_OR_V1_REGEX.test(String(userId || ""))) {
-    return [];
-  }
-
-  const rows = await Evidence.findAll({
-    attributes: [[sequelize.col("Team.ProjectId"), "ProjectId"]],
-    where: {
-      UserId: userId,
-    },
-    include: [
-      {
-        model: Team,
-        attributes: [],
-        required: true,
-        where: {
-          ProjectId: {
-            [Op.ne]: null,
-          },
-        },
-      },
-    ],
-    group: ["Team.ProjectId"],
-    raw: true,
-  });
-
-  return [...new Set(rows.map((row) => row.ProjectId).filter(Boolean))];
-};
+const { buildEmptyPaginatedResponse } = require("../dtos/paginatedResponseDto");
 
 const updateTeam = async (req, res) => {
   try {
@@ -55,15 +28,7 @@ const updateTeam = async (req, res) => {
     await team.update({ nombre });
 
     if (team.drive_folder_id) {
-      try {
-        const drive = getGoogleDriveClient();
-        await drive.files.update({
-          fileId: team.drive_folder_id,
-          resource: { name: nombre },
-        });
-      } catch (driveErr) {
-        console.error("[Drive] No se pudo renombrar carpeta del equipo:", driveErr.message);
-      }
+      await renameDriveItem(team.drive_folder_id, nombre);
     }
 
     res.json(team);
@@ -73,27 +38,13 @@ const updateTeam = async (req, res) => {
 };
 
 const deleteTeam = async (req, res) => {
-  const transaction = await sequelize.transaction();
-
   try {
-    const team = await Team.findByPk(req.params.id, { transaction });
-
-    if (!team) {
-      await transaction.rollback();
+    const result = await deleteTeamGraph(req.params.id);
+    if (!result.deleted) {
       return res.status(404).json({ error: "Equipo no encontrado" });
     }
 
-    await Evidence.destroy({
-      where: { TeamId: team.id },
-      transaction,
-    });
-
-    const folderIds = [team.drive_folder_id];
-
-    await team.destroy({ transaction });
-    await transaction.commit();
-
-    for (const fid of folderIds) {
+    for (const fid of result.folderIds) {
       try { await deleteDriveFolder(fid); } catch (e) {
         console.error("[Drive] No se pudo borrar carpeta", fid, e.message);
       }
@@ -101,7 +52,6 @@ const deleteTeam = async (req, res) => {
 
     res.json({ message: "Equipo eliminado correctamente" });
   } catch (error) {
-    await transaction.rollback();
     res.status(500).json({ error: error.message });
   }
 };
@@ -150,7 +100,12 @@ const getTeamById = async (req, res) => {
     }
 
     if (req.user?.rol === "tecnico" && isWebClientRequest(req)) {
-      const allowedProjectIds = await getParticipatingProjectIdsByUser(req.user.id);
+      const allowedProjectIds = await getParticipatingProjectIdsByUser({
+        userId: req.user.id,
+        Evidence,
+        Team,
+        sequelize,
+      });
       if (!team.ProjectId || !allowedProjectIds.includes(team.ProjectId)) {
         return res.status(404).json({ error: "Equipo no encontrado" });
       }
@@ -168,16 +123,18 @@ const getTeams = async (req, res) => {
     const paginationRequested = hasPaginationQuery(req.query);
 
     if (req.user?.rol === "tecnico" && isWebClientRequest(req)) {
-      const allowedProjectIds = await getParticipatingProjectIdsByUser(req.user.id);
+      const allowedProjectIds = await getParticipatingProjectIdsByUser({
+        userId: req.user.id,
+        Evidence,
+        Team,
+        sequelize,
+      });
       if (allowedProjectIds.length === 0) {
         if (!paginationRequested) {
           return res.json([]);
         }
 
-        return res.json({
-          data: [],
-          meta: buildPaginationMeta({ page: 1, limit: Number(req.query.limit || 20), total: 0 }),
-        });
+        return res.json(buildEmptyPaginatedResponse({ limit: Number(req.query.limit || 20) }));
       }
 
       where.ProjectId = {
@@ -196,10 +153,7 @@ const getTeams = async (req, res) => {
           return res.json([]);
         }
 
-        return res.json({
-          data: [],
-          meta: buildPaginationMeta({ page: 1, limit: Number(req.query.limit || 20), total: 0 }),
-        });
+        return res.json(buildEmptyPaginatedResponse({ limit: Number(req.query.limit || 20) }));
       }
 
       where.ProjectId = req.query.projectId;

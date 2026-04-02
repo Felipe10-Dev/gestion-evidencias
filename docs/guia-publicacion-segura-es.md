@@ -77,6 +77,10 @@ Backend (ejemplo):
 NODE_ENV=production
 PORT=3000
 JWT_SECRET=<valor-seguro>
+TRUST_PROXY=true
+DB_RUN_MIGRATIONS=true
+DB_SYNC_ALTER=false
+DB_SSL=<true|false>
 DB_HOST=<host>
 DB_PORT=5432
 DB_NAME=<db>
