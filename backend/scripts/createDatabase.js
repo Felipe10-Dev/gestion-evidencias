@@ -25,6 +25,7 @@ const buildPgConfig = () => {
   return { host, port, user, password, database };
 };
 
+
 const isSafeDbName = (name) => /^[a-zA-Z0-9_]+$/.test(name);
 
 const quoteIdent = (identifier) => `"${String(identifier).replace(/"/g, '""')}"`;
@@ -53,7 +54,7 @@ const quoteIdent = (identifier) => `"${String(identifier).replace(/"/g, '""')}"`
   try {
     await client.connect();
 
-    const exists = await client.query(
+    const exists = await client.query(s
       "SELECT 1 FROM pg_database WHERE datname = $1 LIMIT 1",
       [targetDb]
     );

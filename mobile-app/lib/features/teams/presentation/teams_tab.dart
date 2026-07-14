@@ -6,9 +6,17 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/app_data_refresh_bus.dart';
 import '../../../core/utils/app_snackbar.dart';
 import '../../../data/models/project_model.dart';
+import '../../../data/models/drive_reference_model.dart';
 import '../../../data/models/session_user.dart';
 import '../../../data/models/team_model.dart';
 import '../../../data/services/api_service.dart';
+
+class _TeamReferencesState {
+  bool expanded = false;
+  bool loading = false;
+  List<DriveReferenceModel> references = const [];
+  String? error;
+}
 
 class TeamsTab extends StatefulWidget {
   const TeamsTab({super.key, required this.token, required this.user});
@@ -27,8 +35,10 @@ class _TeamsTabState extends State<TeamsTab> {
   List<ProjectModel> _projects = const [];
   List<TeamModel> _teams = const [];
   final _nameCtrl = TextEditingController();
+  final _referenceNameCtrl = TextEditingController();
   String? _selectedProjectId;
   Timer? _autoRefreshTimer;
+  final Map<String, _TeamReferencesState> _teamReferences = {};
 
   bool get _isAdmin => widget.user.isAdmin;
   bool get _canCreateTeam {
@@ -49,7 +59,12 @@ class _TeamsTabState extends State<TeamsTab> {
     _autoRefreshTimer?.cancel();
     AppDataRefreshBus.revision.removeListener(_handleExternalRefresh);
     _nameCtrl.dispose();
+    _referenceNameCtrl.dispose();
     super.dispose();
+  }
+
+  _TeamReferencesState _getRefsState(String teamId) {
+    return _teamReferences.putIfAbsent(teamId, () => _TeamReferencesState());
   }
 
   void _handleExternalRefresh() {
@@ -91,6 +106,290 @@ class _TeamsTabState extends State<TeamsTab> {
       showAppSnackBar(context, normalizeError(error));
     } finally {
       if (showLoader && mounted) setState(() => _loading = false);
+    }
+  }
+
+  // ── References (Drive subfolders) ───────────────────────────────────────────
+
+  Future<void> _ensureTeamReferencesLoaded(
+    String teamId, {
+    bool force = false,
+  }) async {
+    final state = _getRefsState(teamId);
+    if (state.loading) return;
+    if (!force && state.references.isNotEmpty) return;
+
+    if (mounted) {
+      setState(() {
+        state.loading = true;
+        state.error = null;
+      });
+    }
+
+    try {
+      final references = await ApiService.getTeamSubfolders(
+        token: widget.token,
+        teamId: teamId,
+      );
+      if (!mounted) return;
+      setState(() {
+        state.references = references;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        state.error = normalizeError(error);
+      });
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        state.loading = false;
+      });
+    }
+  }
+
+  Future<void> _toggleTeamExpanded(TeamModel team) async {
+    final state = _getRefsState(team.id);
+    setState(() {
+      state.expanded = !state.expanded;
+    });
+    if (state.expanded) {
+      await _ensureTeamReferencesLoaded(team.id);
+    }
+  }
+
+  Future<void> _showEditReferenceSheet({
+    required TeamModel team,
+    required DriveReferenceModel reference,
+  }) async {
+    _referenceNameCtrl.text = reference.name;
+    var saving = false;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) => AnimatedPadding(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(sheetCtx).viewInsets.bottom,
+        ),
+        child: StatefulBuilder(
+          builder: (ctx, setSS) {
+            Future<void> submit() async {
+              final nombre = _referenceNameCtrl.text.trim();
+              if (nombre.isEmpty) {
+                showAppSnackBar(ctx, 'Escribe el nombre de la referencia');
+                return;
+              }
+
+              setSS(() => saving = true);
+              try {
+                final updated = await ApiService.renameDriveFolder(
+                  token: widget.token,
+                  folderId: reference.id,
+                  nombre: nombre,
+                );
+
+                final state = _getRefsState(team.id);
+                final idx = state.references.indexWhere((r) => r.id == reference.id);
+                if (idx != -1) {
+                  final next = [...state.references];
+                  next[idx] = updated;
+                  if (mounted) {
+                    setState(() {
+                      state.references = next;
+                    });
+                  }
+                }
+
+                if (!ctx.mounted) return;
+                Navigator.of(ctx).pop();
+                showAppSnackBar(context, 'Referencia actualizada');
+              } catch (error) {
+                if (ctx.mounted) showAppSnackBar(ctx, normalizeError(error));
+              } finally {
+                if (ctx.mounted) setSS(() => saving = false);
+              }
+            }
+
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              child: SafeArea(
+                top: false,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(24, 14, 24, 28),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 42,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: AppColors.ink900.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: AppColors.brandBlue.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: const Icon(
+                              Icons.drive_file_rename_outline,
+                              color: AppColors.brandBlue,
+                              size: 22,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          const Text(
+                            'Editar referencia',
+                            style: TextStyle(
+                              color: AppColors.ink900,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 20,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      TextField(
+                        controller: _referenceNameCtrl,
+                        textInputAction: TextInputAction.done,
+                        decoration: const InputDecoration(
+                          labelText: 'Nombre de la referencia',
+                          prefixIcon: Icon(Icons.folder_outlined, size: 20),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      FilledButton.icon(
+                        onPressed: saving ? null : submit,
+                        icon: saving
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.check_circle_outline, size: 18),
+                        label: Text(saving ? 'Guardando...' : 'Guardar cambios'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showDeleteReferenceConfirm({
+    required TeamModel team,
+    required DriveReferenceModel reference,
+  }) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dlgCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        icon: Container(
+          width: 52,
+          height: 52,
+          decoration: BoxDecoration(
+            color: AppColors.danger.withValues(alpha: 0.08),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.delete_outline, color: AppColors.danger, size: 26),
+        ),
+        title: const Text(
+          'Eliminar referencia',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 18,
+            color: AppColors.ink900,
+          ),
+        ),
+        content: Text(
+          '¿Seguro que deseas eliminar "${reference.name}"? Se eliminará la carpeta en Drive.',
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: AppColors.ink700, fontSize: 14),
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+        actions: [
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(dlgCtx).pop(false),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.ink700,
+                    side: BorderSide(
+                      color: AppColors.ink900.withValues(alpha: 0.15),
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: const Text('Cancelar'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton(
+                  onPressed: () => Navigator.of(dlgCtx).pop(true),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.danger,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: const Text('Eliminar'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await ApiService.deleteDriveFolder(
+        token: widget.token,
+        folderId: reference.id,
+      );
+
+      final state = _getRefsState(team.id);
+      final next = state.references.where((r) => r.id != reference.id).toList();
+      if (mounted) {
+        setState(() {
+          state.references = next;
+        });
+      }
+      if (!mounted) return;
+      showAppSnackBar(context, 'Referencia eliminada');
+    } catch (error) {
+      if (!mounted) return;
+      showAppSnackBar(context, normalizeError(error));
     }
   }
 
@@ -361,7 +660,7 @@ class _TeamsTabState extends State<TeamsTab> {
                 textInputAction: TextInputAction.done,
                 decoration: const InputDecoration(
                   labelText: 'Nombre del equipo',
-                  prefixIcon: Icon(Icons.hvac_outlined, size: 20),
+                  prefixIcon: Icon(Icons.handyman_outlined, size: 20),
                 ),
               ),
               if (onProjectChanged != null) ...[  
@@ -513,20 +812,16 @@ class _TeamsTabState extends State<TeamsTab> {
         borderRadius: BorderRadius.circular(20),
         child: Ink(
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFFEAF2FF), Color(0xFFF5F9FF)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            color: Colors.white,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: AppColors.brandBlue.withValues(alpha: 0.15),
+              color: AppColors.ink900.withValues(alpha: 0.06),
             ),
             boxShadow: [
               BoxShadow(
-                color: AppColors.brandBlue.withValues(alpha: 0.08),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
+                color: AppColors.ink900.withValues(alpha: 0.04),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
               ),
             ],
           ),
@@ -538,19 +833,12 @@ class _TeamsTabState extends State<TeamsTab> {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: AppColors.brandBlue,
+                    color: AppColors.brandBlue.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(13),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.brandBlue.withValues(alpha: 0.35),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
                   ),
                   child: const Icon(
                     Icons.add_circle_outline_rounded,
-                    color: Colors.white,
+                    color: AppColors.brandBlue,
                     size: 22,
                   ),
                 ),
@@ -644,6 +932,8 @@ class _TeamsTabState extends State<TeamsTab> {
   }
 
   Widget _buildTeamCard(TeamModel team) {
+    final refsState = _getRefsState(team.id);
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -657,88 +947,250 @@ class _TeamsTabState extends State<TeamsTab> {
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-        child: Row(
-          children: [
-            Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: AppColors.brandBlue.withValues(alpha: 0.9),
-                shape: BoxShape.circle,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () => _toggleTeamExpanded(team),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+              child: Row(
+                children: [
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: AppColors.brandBlue.withValues(alpha: 0.10),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.handyman_outlined,
+                      color: AppColors.brandBlue,
+                      size: 18,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      team.nombre,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                        color: AppColors.ink900,
+                        letterSpacing: -0.1,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  if (_canCreateTeam)
+                    PopupMenuButton<String>(
+                      icon: const Icon(
+                        Icons.more_vert,
+                        color: AppColors.ink300,
+                        size: 22,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      onSelected: (value) {
+                        if (value == 'edit') _showEditTeamSheet(team);
+                        if (value == 'delete') _showDeleteConfirm(team);
+                      },
+                      itemBuilder: (_) => [
+                        const PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.edit_outlined,
+                                color: AppColors.brandBlue,
+                                size: 18,
+                              ),
+                              SizedBox(width: 10),
+                              Text('Editar'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.delete_outline,
+                                color: AppColors.danger,
+                                size: 18,
+                              ),
+                              SizedBox(width: 10),
+                              Text(
+                                'Eliminar',
+                                style: TextStyle(color: AppColors.danger),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  Icon(
+                    refsState.expanded
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded,
+                    color: AppColors.ink300,
+                    size: 22,
+                  ),
+                ],
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                team.nombre,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 15,
-                  color: AppColors.ink900,
-                  letterSpacing: -0.1,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(width: 6),
-            _canCreateTeam
-                ? PopupMenuButton<String>(
-                    icon: const Icon(
-                      Icons.more_vert,
-                      color: AppColors.ink300,
-                      size: 22,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    onSelected: (value) {
-                      if (value == 'edit') _showEditTeamSheet(team);
-                      if (value == 'delete') _showDeleteConfirm(team);
-                    },
-                    itemBuilder: (_) => [
-                      const PopupMenuItem(
-                        value: 'edit',
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.edit_outlined,
-                              color: AppColors.brandBlue,
-                              size: 18,
-                            ),
-                            SizedBox(width: 10),
-                            Text('Editar'),
-                          ],
+          ),
+          AnimatedCrossFade(
+            firstChild: const SizedBox.shrink(),
+            secondChild: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Divider(
+                    height: 1,
+                    color: AppColors.ink900.withValues(alpha: 0.06),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.folder_outlined,
+                        size: 18,
+                        color: AppColors.ink300,
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Referencias',
+                        style: TextStyle(
+                          color: AppColors.ink900,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
                         ),
                       ),
-                      const PopupMenuItem(
-                        value: 'delete',
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.delete_outline,
-                              color: AppColors.danger,
-                              size: 18,
-                            ),
-                            SizedBox(width: 10),
-                            Text(
-                              'Eliminar',
-                              style: TextStyle(color: AppColors.danger),
-                            ),
-                          ],
+                      const Spacer(),
+                      IconButton(
+                        tooltip: 'Recargar',
+                        onPressed: () => _ensureTeamReferencesLoaded(team.id, force: true),
+                        icon: const Icon(
+                          Icons.refresh_rounded,
+                          size: 20,
+                          color: AppColors.ink300,
                         ),
                       ),
                     ],
-                  )
-                : const Icon(
-                    Icons.chevron_right,
-                    color: AppColors.ink300,
-                    size: 20,
-                ),
-          ],
-        ),
+                  ),
+                  if (refsState.loading)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 6, bottom: 6),
+                      child: Center(
+                        child: SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.brandBlue,
+                          ),
+                        ),
+                      ),
+                    )
+                  else if (refsState.error != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        refsState.error!,
+                        style: const TextStyle(
+                          color: AppColors.danger,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    )
+                  else if (refsState.references.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        'Aún no hay referencias en este equipo.',
+                        style: TextStyle(
+                          color: AppColors.ink700.withValues(alpha: 0.9),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    )
+                  else
+                    ...refsState.references.map(
+                      (ref) => Container(
+                        margin: const EdgeInsets.only(top: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: AppColors.ink900.withValues(alpha: 0.02),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: AppColors.ink900.withValues(alpha: 0.05),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.folder_open_outlined,
+                              size: 18,
+                              color: AppColors.brandBlue,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                ref.name,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: AppColors.ink900,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              tooltip: 'Editar',
+                              onPressed: () => _showEditReferenceSheet(
+                                team: team,
+                                reference: ref,
+                              ),
+                              icon: const Icon(
+                                Icons.edit_outlined,
+                                size: 20,
+                                color: AppColors.ink300,
+                              ),
+                            ),
+                            IconButton(
+                              tooltip: 'Eliminar',
+                              onPressed: () => _showDeleteReferenceConfirm(
+                                team: team,
+                                reference: ref,
+                              ),
+                              icon: const Icon(
+                                Icons.delete_outline,
+                                size: 20,
+                                color: AppColors.danger,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            crossFadeState: refsState.expanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 180),
+          ),
+        ],
       ),
     );
   }
@@ -867,7 +1319,7 @@ class _TeamsTabState extends State<TeamsTab> {
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: const Icon(
-                      Icons.kitchen_outlined,
+                        Icons.handyman_outlined,
                       size: 28,
                       color: AppColors.brandBlue,
                     ),

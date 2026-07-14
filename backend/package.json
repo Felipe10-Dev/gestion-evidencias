@@ -10,6 +10,7 @@
     "db:create": "node scripts/createDatabase.js",
     "db:single-tenant:plan": "node scripts/cleanupSingleTenant.js",
     "db:single-tenant:apply": "node scripts/cleanupSingleTenant.js",
+    "db:seed": "node scripts/seedUsers.js",
     "code:audit": "node scripts/auditUnusedCode.js"
   },
   "keywords": [],

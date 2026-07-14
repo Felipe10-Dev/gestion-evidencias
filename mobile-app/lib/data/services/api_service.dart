@@ -95,6 +95,26 @@ class ApiService {
     }
   }
 
+  static Future<http.Response> _patch(
+    Uri uri, {
+    Map<String, String>? headers,
+    Object? body,
+  }) async {
+    try {
+      return await http
+          .patch(uri, headers: headers, body: body)
+          .timeout(_requestTimeout);
+    } on TimeoutException {
+      throw Exception(
+        'Tiempo de espera agotado. Verifica tu conexion o el servidor.',
+      );
+    } on SocketException {
+      throw Exception(
+        'No se pudo conectar con el servidor. Revisa internet y URL del API.',
+      );
+    }
+  }
+
   static Future<http.Response> _delete(
     Uri uri, {
     Map<String, String>? headers,
@@ -279,6 +299,48 @@ class ApiService {
     }
 
     throw Exception('No se pudieron cargar subcarpetas del equipo');
+  }
+
+  static Future<DriveReferenceModel> renameDriveFolder({
+    required String token,
+    required String folderId,
+    required String nombre,
+  }) async {
+    final response = await _patch(
+      _uri('/evidences/folders/$folderId'),
+      headers: _headers(token),
+      body: jsonEncode({'nombre': nombre}),
+    );
+
+    final body = _tryDecodeMap(response.body);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return DriveReferenceModel.fromJson(body);
+    }
+
+    throw Exception(
+      (body['error'] ?? body['message'] ?? 'No se pudo renombrar la carpeta')
+          .toString(),
+    );
+  }
+
+  static Future<void> deleteDriveFolder({
+    required String token,
+    required String folderId,
+  }) async {
+    final response = await _delete(
+      _uri('/evidences/folders/$folderId'),
+      headers: _headers(token),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return;
+    }
+
+    final body = _tryDecodeMap(response.body);
+    throw Exception(
+      (body['error'] ?? body['message'] ?? 'No se pudo eliminar la carpeta')
+          .toString(),
+    );
   }
 
   static Future<void> createTeam({
